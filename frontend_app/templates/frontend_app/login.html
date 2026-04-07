@@ -1,0 +1,162 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Connexion - Gestion Stock</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+<style>
+* { box-sizing:border-box; margin:0; padding:0; }
+body {
+    font-family:'Segoe UI',sans-serif;
+    background:linear-gradient(135deg,#0f172a,#1e3a5f);
+    min-height:100vh;
+    display:flex; align-items:center; justify-content:center;
+}
+.card {
+    width:100%; max-width:400px;
+    background:#1e293b;
+    border-radius:18px;
+    padding:36px 32px;
+    box-shadow:0 20px 60px rgba(0,0,0,0.5);
+    animation:fadeUp .5s ease;
+}
+@keyframes fadeUp {
+    from { opacity:0; transform:translateY(20px); }
+    to   { opacity:1; transform:translateY(0); }
+}
+.logo { text-align:center; margin-bottom:24px; }
+.logo .icon { font-size:2.5rem; }
+.logo h2 { color:white; font-weight:700; font-size:1.4rem; margin-top:8px; }
+.logo p { color:#94a3b8; font-size:.82rem; margin-top:4px; }
+.form-label { color:#cbd5e1; font-size:.85rem; font-weight:600; margin-bottom:5px; }
+.form-control {
+    background:#0f172a; border:1px solid #334155;
+    color:white; border-radius:8px; padding:10px 14px;
+}
+.form-control:focus {
+    background:#0f172a; color:white;
+    border-color:#3b82f6; box-shadow:0 0 0 3px rgba(59,130,246,.2);
+}
+.form-control::placeholder { color:#475569; }
+.input-group .form-control { border-right:none; }
+.input-group .btn-eye {
+    background:#0f172a; border:1px solid #334155; border-left:none;
+    color:#64748b; border-radius:0 8px 8px 0; padding:0 14px;
+    cursor:pointer;
+}
+.input-group .btn-eye:hover { color:#94a3b8; }
+.btn-login {
+    background:linear-gradient(135deg,#2563eb,#1d4ed8);
+    color:white; border:none; border-radius:8px;
+    padding:11px; font-weight:600; font-size:.95rem;
+    width:100%; transition:.2s; margin-top:4px;
+}
+.btn-login:hover { opacity:.9; transform:translateY(-1px); }
+.divider { text-align:center; color:#475569; font-size:.8rem; margin:18px 0; position:relative; }
+.divider::before, .divider::after {
+    content:''; position:absolute; top:50%; width:42%; height:1px; background:#334155;
+}
+.divider::before { left:0; }
+.divider::after  { right:0; }
+.btn-register {
+    background:transparent; border:1px solid #334155;
+    color:#94a3b8; border-radius:8px; padding:10px;
+    font-size:.88rem; width:100%; transition:.2s;
+}
+.btn-register:hover { border-color:#3b82f6; color:#60a5fa; }
+.alert-err {
+    background:rgba(239,68,68,.15); border:1px solid rgba(239,68,68,.3);
+    color:#fca5a5; border-radius:8px; padding:10px 14px;
+    font-size:.83rem; margin-top:14px; display:none;
+}
+.footer { text-align:center; color:#475569; font-size:.75rem; margin-top:20px; }
+</style>
+</head>
+<body>
+
+<div class="card">
+    <div class="logo">
+        <div class="icon">📦</div>
+        <h2>Stock Manager</h2>
+        <p>Connectez-vous à votre espace</p>
+    </div>
+
+    <form id="loginForm">
+        <div class="mb-3">
+            <label class="form-label">Nom d'utilisateur</label>
+            <input type="text" class="form-control" id="username" placeholder="Votre nom d'utilisateur" required autofocus>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Mot de passe</label>
+            <div class="input-group">
+                <input type="password" class="form-control" id="password" placeholder="••••••••" required>
+                <button type="button" class="btn-eye" id="togglePw">
+                    <i class="bi bi-eye"></i>
+                </button>
+            </div>
+        </div>
+
+        <button type="submit" class="btn-login">
+            <i class="bi bi-box-arrow-in-right me-2"></i>Se connecter
+        </button>
+
+        <div class="alert-err" id="errMsg"></div>
+    </form>
+
+    <div class="divider">ou</div>
+
+    <a href="/register/" style="text-decoration:none;">
+        <button class="btn-register">
+            <i class="bi bi-shop me-2"></i>Créer mon compte & ma boutique
+        </button>
+    </a>
+
+    <div class="footer">© 2026 Stock Manager</div>
+</div>
+
+<script>
+function getCookie(name) {
+    return document.cookie.split(';').map(c => c.trim())
+        .find(c => c.startsWith(name+'='))?.split('=')[1] || '';
+}
+
+document.getElementById('togglePw').addEventListener('click', function() {
+    const inp = document.getElementById('password');
+    const icon = this.querySelector('i');
+    if(inp.type === 'password') {
+        inp.type = 'text';
+        icon.className = 'bi bi-eye-slash';
+    } else {
+        inp.type = 'password';
+        icon.className = 'bi bi-eye';
+    }
+});
+
+document.getElementById('loginForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const err = document.getElementById('errMsg');
+    err.style.display = 'none';
+    const res = await fetch('/api/login/', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
+        body: JSON.stringify({
+            username: document.getElementById('username').value,
+            password: document.getElementById('password').value
+        })
+    });
+    const data = await res.json();
+    if(data.success) {
+        window.location.href = data.redirect_url;
+    } else if(data.non_approuvee) {
+        window.location.href = '/non-approuvee/';
+    } else {
+        err.style.display = 'block';
+        err.innerText = data.error || 'Erreur de connexion';
+    }
+});
+</script>
+</body>
+</html>

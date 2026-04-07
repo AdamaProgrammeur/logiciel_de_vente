@@ -1,0 +1,302 @@
+{% extends "frontend_app/base.html" %}
+{% load static %}
+{% block title %}Achats{% endblock %}
+
+{% block content %}
+<style>
+.page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:10px; }
+.page-header h2 { font-weight:700; color:#1e3c72; margin:0; }
+.search-box { position:relative; }
+.search-box input { padding-left:38px; border-radius:20px; border:1px solid #dee2e6; width:240px; height:38px; font-size:.88rem; }
+.search-box i { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#aaa; }
+.btn-add { background:linear-gradient(135deg,#1e3c72,#2a5298); color:white; border:none; border-radius:10px; padding:8px 18px; font-size:.88rem; display:flex; align-items:center; gap:6px; transition:.2s; cursor:pointer; }
+.btn-add:hover { transform:translateY(-2px); box-shadow:0 4px 12px rgba(30,60,114,.3); }
+.table-card { background:white; border-radius:14px; box-shadow:0 2px 12px rgba(0,0,0,.07); overflow:hidden; }
+.table-card thead th { background:#1e3c72; color:white; font-size:.78rem; text-transform:uppercase; letter-spacing:.5px; padding:12px 16px; border:none; }
+.table-card tbody td { padding:11px 16px; vertical-align:middle; font-size:.88rem; border-bottom:1px solid #f0f0f0; }
+.table-card tbody tr:hover { background:#f8f9ff; }
+.table-card tbody tr:last-child td { border-bottom:none; }
+.btn-icon { width:32px; height:32px; border-radius:8px; border:none; display:inline-flex; align-items:center; justify-content:center; font-size:.85rem; transition:.2s; cursor:pointer; }
+.btn-icon:hover { transform:scale(1.1); }
+.btn-edit { background:#fff3cd; color:#856404; }
+.btn-edit:hover { background:#ffc107; color:white; }
+.btn-del { background:#fde8e8; color:#c0392b; }
+.btn-del:hover { background:#e74c3c; color:white; }
+.text-ok { color:#059669; font-weight:700; }
+.text-due { color:#ef4444; font-weight:700; }
+</style>
+
+<div class="page-header">
+    <h2><i class="bi bi-cart-plus me-2" style="color:#2a5298;"></i>Gestion Achats</h2>
+    <div class="d-flex gap-2 align-items-center flex-wrap">
+        <div class="search-box">
+            <i class="bi bi-search"></i>
+            <input type="text" id="searchInput" placeholder="Rechercher..." oninput="filterTable()">
+        </div>
+        <button class="btn-add" onclick="openModal()">
+            <i class="bi bi-cart-plus-fill"></i> Nouvel achat
+        </button>
+    </div>
+</div>
+
+<div id="alertBox"></div>
+
+<div class="table-card">
+    <table class="table mb-0">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Fournisseur</th>
+                <th>Date</th>
+                <th>Produits</th>
+                <th>Total</th>
+                <th>Payé</th>
+                <th>Reste</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="achats-list"></tbody>
+    </table>
+</div>
+
+<!-- MODAL -->
+<div class="modal fade" id="achatModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content" style="border-radius:14px;border:none;">
+      <div class="modal-header" style="background:linear-gradient(135deg,#1e3c72,#2a5298);color:white;border-radius:14px 14px 0 0;">
+        <h5 class="modal-title"><i class="bi bi-cart-plus me-2"></i><span id="modalTitle">Nouvel achat</span></h5>
+        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <form id="achatForm">
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Fournisseur</label>
+            <select class="form-control" id="fournisseurSelect" required>
+                <option value="">-- Choisir un fournisseur --</option>
+            </select>
+          </div>
+
+          <label class="form-label fw-semibold">Produits</label>
+          <table class="table table-bordered table-sm" id="produitsTable">
+            <thead class="table-light">
+              <tr>
+                <th>Produit</th>
+                <th style="width:100px;">Quantité</th>
+                <th style="width:120px;">Prix unitaire</th>
+                <th style="width:100px;">Total</th>
+                <th style="width:40px;"></th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+
+          <button type="button" class="btn btn-outline-secondary btn-sm mb-3" onclick="addRow()">
+            <i class="bi bi-plus-circle me-1"></i> Ajouter produit
+          </button>
+
+          <div class="d-flex justify-content-end mb-3">
+            <span class="fw-bold">Total général : <span id="totalGeneral" class="text-primary">0.00</span></span>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Montant payé</label>
+            <input type="number" class="form-control" id="montantPaye" value="0" min="0" step="0.01">
+          </div>
+
+          <button type="submit" class="btn w-100" style="background:linear-gradient(135deg,#1e3c72,#2a5298);color:white;border-radius:8px;">
+            <i class="bi bi-check-circle me-1"></i> Enregistrer
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let produits = [];
+let editId = null;
+let modalInstance = null;
+
+function getCSRFToken() {
+    return document.cookie.split('; ').find(r => r.startsWith('csrftoken'))?.split('=')[1];
+}
+
+function showAlert(msg, type='success') {
+    const b = document.getElementById('alertBox');
+    b.innerHTML = `<div class="alert alert-${type} alert-dismissible fade show">${msg}<button class="btn-close" data-bs-dismiss="alert"></button></div>`;
+    setTimeout(() => b.innerHTML = '', 5000);
+}
+
+function openModal(id=null) {
+    editId = id;
+    document.getElementById('achatForm').reset();
+    document.querySelector('#produitsTable tbody').innerHTML = '';
+    document.getElementById('montantPaye').value = 0;
+    document.getElementById('totalGeneral').innerText = '0.00';
+    document.getElementById('modalTitle').innerText = id ? 'Modifier achat' : 'Nouvel achat';
+    modalInstance = new bootstrap.Modal(document.getElementById('achatModal'));
+    modalInstance.show();
+}
+
+function loadFournisseurs() {
+    fetch('/api/fournisseurs/')
+    .then(r => r.json())
+    .then(data => {
+        const sel = document.getElementById('fournisseurSelect');
+        sel.innerHTML = '<option value="">-- Choisir un fournisseur --</option>';
+        data.forEach(f => sel.innerHTML += `<option value="${f.id}">${f.nom}</option>`);
+    });
+}
+
+function loadProduits() {
+    fetch('/api/produits/')
+    .then(r => r.json())
+    .then(data => { produits = data; });
+}
+
+function addRow(pId='', qte=1, prix=0) {
+    const tr = document.createElement('tr');
+    let opts = '<option value="">-- Produit --</option>';
+    produits.forEach(p => opts += `<option value="${p.id}" ${p.id==pId?'selected':''}>${p.nom}</option>`);
+    tr.innerHTML = `
+        <td><select class="form-control form-control-sm produit">${opts}</select></td>
+        <td><input type="number" class="form-control form-control-sm qte" value="${qte}" min="1"></td>
+        <td><input type="number" class="form-control form-control-sm prix" value="${prix}" min="0" step="0.01"></td>
+        <td class="total fw-bold">0.00</td>
+        <td><button type="button" class="btn btn-danger btn-sm" onclick="this.closest('tr').remove();calc()"><i class="bi bi-x"></i></button></td>
+    `;
+    tr.querySelector('.qte').oninput = calc;
+    tr.querySelector('.prix').oninput = calc;
+    document.querySelector('#produitsTable tbody').appendChild(tr);
+    calc();
+}
+
+function calc() {
+    let total = 0;
+    document.querySelectorAll('#produitsTable tbody tr').forEach(tr => {
+        const q = parseFloat(tr.querySelector('.qte').value) || 0;
+        const p = parseFloat(tr.querySelector('.prix').value) || 0;
+        const t = q * p;
+        tr.querySelector('.total').innerText = t.toFixed(2);
+        total += t;
+    });
+    document.getElementById('totalGeneral').innerText = total.toFixed(2);
+}
+
+document.getElementById('achatForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const fournisseur = parseInt(document.getElementById('fournisseurSelect').value);
+    if(!fournisseur) { showAlert('Choisissez un fournisseur', 'danger'); return; }
+
+    const montant_paye = parseFloat(document.getElementById('montantPaye').value) || 0;
+
+    const produitsData = [];
+    document.querySelectorAll('#produitsTable tbody tr').forEach(tr => {
+        const produitId = parseInt(tr.querySelector('.produit').value);
+        const quantite  = parseInt(tr.querySelector('.qte').value);
+        const prix_unitaire = parseFloat(tr.querySelector('.prix').value);
+        if(produitId && quantite > 0) {
+            produitsData.push({ produit: produitId, quantite, prix_unitaire });
+        }
+    });
+
+    if(!produitsData.length) { showAlert('Ajoutez au moins un produit', 'danger'); return; }
+
+    const payload = { fournisseur, montant_paye, produits: produitsData };
+    const url    = editId ? `/api/entrees/${editId}/` : '/api/entrees/';
+    const method = editId ? 'PUT' : 'POST';
+
+    fetch(url, {
+        method,
+        headers: { 'Content-Type':'application/json', 'X-CSRFToken': getCSRFToken() },
+        body: JSON.stringify(payload)
+    })
+    .then(async r => {
+        if(!r.ok) {
+            const err = await r.json();
+            showAlert('Erreur : ' + JSON.stringify(err), 'danger');
+            return null;
+        }
+        return r.json();
+    })
+    .then(res => {
+        if(res) {
+            modalInstance.hide();
+            loadAchats();
+            showAlert(editId ? 'Achat modifié !' : 'Achat enregistré !');
+        }
+    });
+});
+
+function loadAchats() {
+    fetch('/api/entrees/')
+    .then(r => r.json())
+    .then(data => {
+        const tbody = document.getElementById('achats-list');
+        tbody.innerHTML = '';
+        if(!data.length) {
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:#aaa;">Aucun achat enregistré</td></tr>';
+            return;
+        }
+        data.forEach(e => {
+            const produitsHTML = e.produits.map(p =>
+                `<div><b>${p.produit_nom || p.produit}</b> : ${p.quantite} × ${parseFloat(p.prix_unitaire).toFixed(2)}</div>`
+            ).join('');
+            const total      = parseFloat(e.total) || 0;
+            const montantPaye = parseFloat(e.montant_paye) || 0;
+            const reste      = total - montantPaye;
+            const tr = document.createElement('tr');
+            tr.dataset.search = `${(e.fournisseur_nom||'').toLowerCase()} ${new Date(e.date).toLocaleDateString()}`;
+            tr.innerHTML = `
+                <td><span style="color:#aaa;font-size:.8rem;">#${e.id}</span></td>
+                <td><b>${e.fournisseur_nom || '—'}</b></td>
+                <td style="font-size:.82rem;color:#888;">${new Date(e.date).toLocaleString()}</td>
+                <td>${produitsHTML}</td>
+                <td><b>${total.toLocaleString()}</b></td>
+                <td>${montantPaye.toLocaleString()}</td>
+                <td class="${reste > 0 ? 'text-due' : 'text-ok'}">${reste.toLocaleString()}</td>
+                <td>
+                    <div style="display:flex;align-items:center;gap:4px;">
+                        <button class="btn-icon btn-edit" onclick="editAchat(${e.id})" title="Modifier"><i class="bi bi-pencil-fill"></i></button>
+                        <button class="btn-icon btn-del" onclick="delAchat(${e.id})" title="Supprimer"><i class="bi bi-trash-fill"></i></button>
+                    </div>
+                </td>`;
+            tbody.appendChild(tr);
+        });
+    });
+}
+
+function editAchat(id) {
+    fetch(`/api/entrees/${id}/`)
+    .then(r => r.json())
+    .then(e => {
+        openModal(id);
+        setTimeout(() => {
+            document.getElementById('fournisseurSelect').value = e.fournisseur;
+            document.getElementById('montantPaye').value = e.montant_paye || 0;
+            document.querySelector('#produitsTable tbody').innerHTML = '';
+            e.produits.forEach(p => addRow(p.produit, p.quantite, p.prix_unitaire));
+        }, 300);
+    });
+}
+
+function delAchat(id) {
+    if(!confirm('Supprimer cet achat ?')) return;
+    fetch(`/api/entrees/${id}/`, { method:'DELETE', headers:{'X-CSRFToken':getCSRFToken()} })
+    .then(() => { loadAchats(); showAlert('Achat supprimé.', 'warning'); });
+}
+
+function filterTable() {
+    const q = document.getElementById('searchInput').value.toLowerCase();
+    document.querySelectorAll('#achats-list tr[data-search]').forEach(r => {
+        r.style.display = r.dataset.search.includes(q) ? '' : 'none';
+    });
+}
+
+loadFournisseurs();
+loadProduits();
+loadAchats();
+</script>
+{% endblock %}

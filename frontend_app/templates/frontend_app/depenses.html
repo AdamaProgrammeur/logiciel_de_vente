@@ -1,0 +1,134 @@
+{% extends "frontend_app/base.html" %}
+{% load static %}
+{% block title %}Dépenses{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Dépenses</h2>
+    <button class="btn btn-danger" onclick="openModal()">
+        <i class="bi bi-plus-lg"></i> Ajouter Dépense
+    </button>
+</div>
+
+<div class="row mb-3">
+    <div class="col-md-3">
+        <div class="card text-white bg-danger">
+            <div class="card-body text-center">
+                <h6>Total dépenses</h6>
+                <h3 id="totalDepenses">—</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<table class="table table-striped table-hover">
+    <thead class="table-dark">
+        <tr>
+            <th>ID</th>
+            <th>Description</th>
+            <th>Montant</th>
+            <th>Date</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody id="depenses-list"></tbody>
+</table>
+
+<!-- MODAL -->
+<div class="modal fade" id="depenseModal">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Dépense</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="depenseForm">
+          <div class="mb-3">
+            <label>Description</label>
+            <input type="text" class="form-control" id="description" required placeholder="Ex: Loyer, Électricité...">
+          </div>
+          <div class="mb-3">
+            <label>Montant</label>
+            <input type="number" class="form-control" id="montant" min="0" step="0.01" required>
+          </div>
+          <button class="btn btn-danger w-100">Enregistrer</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let editId = null;
+let modalInstance = null;
+
+function getCSRFToken(){
+    return document.cookie.split('; ').find(r => r.startsWith('csrftoken'))?.split('=')[1];
+}
+
+function openModal(id=null, desc='', montant=0){
+    editId = id;
+    document.getElementById('description').value = desc;
+    document.getElementById('montant').value = montant;
+    modalInstance = new bootstrap.Modal(document.getElementById('depenseModal'));
+    modalInstance.show();
+}
+
+document.getElementById('depenseForm').addEventListener('submit', function(e){
+    e.preventDefault();
+    let description = document.getElementById('description').value;
+    let montant = parseFloat(document.getElementById('montant').value);
+
+    let url = '/api/depenses/', method = 'POST';
+    if(editId){ url += editId + '/'; method = 'PUT'; }
+
+    fetch(url, {
+        method,
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCSRFToken()},
+        body: JSON.stringify({ description, montant })
+    })
+    .then(async r => {
+        if(!r.ok){ let err = await r.json(); alert("Erreur : " + JSON.stringify(err)); return null; }
+        return r.json();
+    })
+    .then(res => {
+        if(res){ modalInstance.hide(); loadDepenses(); }
+    });
+});
+
+function loadDepenses(){
+    fetch('/api/depenses/')
+    .then(r => r.json())
+    .then(data => {
+        let tbody = document.getElementById('depenses-list');
+        tbody.innerHTML = '';
+        let total = 0;
+        data.forEach(d => {
+            total += parseFloat(d.montant);
+            tbody.innerHTML += `
+            <tr>
+                <td>${d.id}</td>
+                <td>${d.description}</td>
+                <td><b>${parseFloat(d.montant).toFixed(2)}</b></td>
+                <td>${new Date(d.date).toLocaleString()}</td>
+                <td>
+                    <button class="btn btn-warning btn-sm" onclick="openModal(${d.id}, '${d.description}', ${d.montant})">✏️</button>
+                    <button class="btn btn-danger btn-sm" onclick="del(${d.id})">🗑️</button>
+                </td>
+            </tr>`;
+        });
+        document.getElementById('totalDepenses').innerText = total.toFixed(2);
+    });
+}
+
+function del(id){
+    if(confirm('Supprimer cette dépense ?')){
+        fetch(`/api/depenses/${id}/`, { method: 'DELETE', headers: {'X-CSRFToken': getCSRFToken()} })
+        .then(() => loadDepenses());
+    }
+}
+
+loadDepenses();
+</script>
+{% endblock %}

@@ -1,0 +1,155 @@
+{% extends "frontend_app/base.html" %}
+{% load static %}
+{% block title %}Catégories{% endblock %}
+
+{% block content %}
+<style>
+.page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:10px; }
+.page-header h2 { font-weight:700; color:#1e3c72; margin:0; }
+.search-box { position:relative; }
+.search-box input { padding-left:38px; border-radius:20px; border:1px solid #dee2e6; width:240px; height:38px; font-size:0.88rem; }
+.search-box i { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#aaa; }
+.btn-add { background:linear-gradient(135deg,#1e3c72,#2a5298); color:white; border:none; border-radius:10px; padding:8px 18px; font-size:0.88rem; display:flex; align-items:center; gap:6px; transition:0.2s; }
+.btn-add:hover { transform:translateY(-2px); box-shadow:0 4px 12px rgba(30,60,114,0.3); color:white; }
+.table-card { background:white; border-radius:14px; box-shadow:0 2px 12px rgba(0,0,0,0.07); overflow:hidden; }
+.table-card thead th { background:#1e3c72; color:white; font-size:0.8rem; text-transform:uppercase; letter-spacing:0.5px; padding:12px 16px; border:none; }
+.table-card tbody td { padding:11px 16px; vertical-align:middle; font-size:0.88rem; border-bottom:1px solid #f0f0f0; }
+.table-card tbody tr:hover { background:#f8f9ff; }
+.table-card tbody tr:last-child td { border-bottom:none; }
+.btn-icon { width:32px; height:32px; border-radius:8px; border:none; display:inline-flex; align-items:center; justify-content:center; font-size:0.85rem; transition:0.2s; cursor:pointer; }
+.btn-icon:hover { transform:scale(1.1); }
+.btn-edit { background:#fff3cd; color:#856404; }
+.btn-edit:hover { background:#ffc107; color:white; }
+.btn-del { background:#fde8e8; color:#c0392b; }
+.btn-del:hover { background:#e74c3c; color:white; }
+.empty-row td { text-align:center; padding:30px; color:#aaa; font-size:0.9rem; }
+</style>
+
+<div class="page-header">
+    <h2><i class="bi bi-tags me-2" style="color:#2a5298;"></i>Catégories</h2>
+    <div class="d-flex gap-2 align-items-center flex-wrap">
+        <div class="search-box">
+            <i class="bi bi-search"></i>
+            <input type="text" id="searchInput" placeholder="Rechercher une catégorie..." oninput="filterTable()">
+        </div>
+        <button class="btn-add" data-bs-toggle="modal" data-bs-target="#categorieModal">
+            <i class="bi bi-folder-plus"></i> Nouvelle catégorie
+        </button>
+    </div>
+</div>
+
+<div class="table-card">
+    <table class="table mb-0">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Nom</th>
+                <th>Description</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="categories-list"></tbody>
+    </table>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="categorieModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content" style="border-radius:14px;border:none;">
+      <div class="modal-header" style="background:linear-gradient(135deg,#1e3c72,#2a5298);color:white;border-radius:14px 14px 0 0;">
+        <h5 class="modal-title"><i class="bi bi-tags me-2"></i><span id="modalTitle">Nouvelle catégorie</span></h5>
+        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <form id="categorieForm">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Nom</label>
+            <input type="text" class="form-control" name="nom" required placeholder="Nom de la catégorie">
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Description</label>
+            <textarea class="form-control" name="description" rows="3" placeholder="Description (optionnel)"></textarea>
+          </div>
+          <button type="submit" class="btn w-100" style="background:linear-gradient(135deg,#1e3c72,#2a5298);color:white;border-radius:8px;">
+            <i class="bi bi-check-circle me-1"></i> Enregistrer
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let allCategories = [];
+
+function getCSRFToken() {
+    return document.cookie.split('; ').find(r => r.startsWith('csrftoken'))?.split('=')[1];
+}
+
+function filterTable() {
+    const q = document.getElementById('searchInput').value.toLowerCase();
+    document.querySelectorAll('#categories-list tr[data-search]').forEach(r => {
+        r.style.display = r.dataset.search.includes(q) ? '' : 'none';
+    });
+}
+
+function loadCategories() {
+    fetch('/api/categories/')
+    .then(r => r.json())
+    .then(data => {
+        allCategories = data;
+        const tbody = document.getElementById('categories-list');
+        tbody.innerHTML = '';
+        if(!data.length) { tbody.innerHTML = '<tr class="empty-row"><td colspan="4">Aucune catégorie trouvée</td></tr>'; return; }
+        data.forEach(c => {
+            const tr = document.createElement('tr');
+            tr.dataset.search = `${c.nom} ${c.description||''}`.toLowerCase();
+            tr.innerHTML = `
+                <td><span style="color:#aaa;font-size:0.8rem;">#${c.id}</span></td>
+                <td><b>${c.nom}</b></td>
+                <td>${c.description || '<span style="color:#ccc;">—</span>'}</td>
+                <td>
+                    <button class="btn-icon btn-edit me-1" onclick="editCategorie(${c.id})" title="Modifier"><i class="bi bi-pencil-fill"></i></button>
+                    <button class="btn-icon btn-del" onclick="deleteCategorie(${c.id})" title="Supprimer"><i class="bi bi-trash-fill"></i></button>
+                </td>`;
+            tbody.appendChild(tr);
+        });
+    });
+}
+
+document.getElementById('categorieForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const form = e.target;
+    const data = Object.fromEntries(new FormData(form));
+    let url = '/api/categories/', method = 'POST';
+    if(form.dataset.editId) { url += form.dataset.editId + '/'; method = 'PATCH'; delete form.dataset.editId; }
+    fetch(url, { method, headers: {'Content-Type':'application/json','X-CSRFToken':getCSRFToken()}, body: JSON.stringify(data) })
+    .then(() => { loadCategories(); form.reset(); bootstrap.Modal.getInstance(document.getElementById('categorieModal')).hide(); });
+});
+
+function editCategorie(id) {
+    const c = allCategories.find(x => x.id === id);
+    if(!c) return;
+    const form = document.getElementById('categorieForm');
+    form.nom.value = c.nom;
+    form.description.value = c.description || '';
+    form.dataset.editId = id;
+    document.getElementById('modalTitle').innerText = 'Modifier catégorie';
+    new bootstrap.Modal(document.getElementById('categorieModal')).show();
+}
+
+function deleteCategorie(id) {
+    if(!confirm('Supprimer cette catégorie ?')) return;
+    fetch(`/api/categories/${id}/`, { method:'DELETE', headers:{'X-CSRFToken':getCSRFToken()} })
+    .then(() => loadCategories());
+}
+
+document.getElementById('categorieModal').addEventListener('hidden.bs.modal', () => {
+    document.getElementById('categorieForm').reset();
+    delete document.getElementById('categorieForm').dataset.editId;
+    document.getElementById('modalTitle').innerText = 'Nouvelle catégorie';
+});
+
+loadCategories();
+</script>
+{% endblock %}

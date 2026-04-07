@@ -1,0 +1,113 @@
+/* === Variables de couleurs === */
+:root {
+    --primary-color: #435ebe;
+    --secondary-color: #6c757d;
+    --bg-color: #f8f9fa;
+    --sidebar-bg: #1f2937;
+    --sidebar-text: #ffffff;
+    --card-bg: #ffffff;
+    --card-shadow: rgba(0,0,0,0.1);
+}
+
+/* === Reset & Global === */
+body {
+    background-color: var(--bg-color);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+h2 {
+    color: var(--primary-color);
+}
+
+/* === Sidebar === */
+#wrapper {
+    min-height: 100vh;
+}
+
+#sidebar-wrapper {
+    width: 220px;
+    background-color: var(--sidebar-bg);
+    transition: all 0.3s;
+}
+
+#sidebar-wrapper .sidebar-heading {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--sidebar-text);
+}
+
+#sidebar-wrapper .list-group-item {
+    border: none;
+    color: var(--sidebar-text);
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+#sidebar-wrapper .list-group-item:hover {
+    background-color: var(--primary-color);
+    color: #fff;
+}
+
+/* === Page content === */
+#page-content-wrapper {
+    width: 100%;
+}
+
+/* === Cards === */
+.card {
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 12px var(--card-shadow);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 6px 20px var(--card-shadow);
+}
+
+.card-title {
+    color: var(--primary-color);
+}
+
+/* === Table styling === */
+.table th, .table td {
+    vertical-align: middle !important;
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(67, 94, 190, 0.1);
+}
+
+/* === Buttons === */
+.btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-primary:hover {
+    background-color: #2e3b95;
+    border-color: #2e3b95;
+}
+
+.btn-success {
+    background-color: #28a745;
+    border-color: #28a745;
+}
+
+/* === Modal === */
+.modal-content {
+    border-radius: 0.75rem;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+}
+
+/* === Responsive adjustments === */
+@media (max-width: 768px) {
+    #sidebar-wrapper {
+        width: 0;
+        position: fixed;
+        z-index: 999;
+    }
+    #sidebar-wrapper.d-none {
+        display: none !important;
+    }
+}

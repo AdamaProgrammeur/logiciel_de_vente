@@ -1,0 +1,137 @@
+{% extends "frontend_app/base.html" %}
+{% block title %}Paramètres{% endblock %}
+{% block content %}
+<style>
+.page-card { background:white; border-radius:14px; box-shadow:0 2px 10px rgba(0,0,0,0.07); padding:28px; max-width:600px; }
+.page-title { font-weight:700; color:#1e3c72; margin-bottom:24px; font-size:1.2rem; }
+.btn-save { background:linear-gradient(135deg,#1e3c72,#2a5298); color:white; border:none; border-radius:8px; padding:10px 24px; font-size:.9rem; cursor:pointer; transition:.2s; }
+.btn-save:hover { opacity:.9; }
+#alertBox { display:none; }
+</style>
+
+<div class="page-title"><i class="bi bi-gear-fill me-2"></i>Paramètres de la boutique</div>
+
+<div class="page-card mb-4">
+    <h6 class="fw-bold mb-3" style="color:#475569;">Informations boutique</h6>
+    <div id="alertBox" class="alert alert-success"></div>
+    <form id="boutiqueForm">
+        <div class="row g-3">
+            <div class="col-12">
+                <label class="form-label fw-semibold">Nom de la boutique</label>
+                <input type="text" class="form-control" name="nom" id="bNom" required>
+            </div>
+            <div class="col-12">
+                <label class="form-label fw-semibold">Slogan</label>
+                <input type="text" class="form-control" name="slogan" id="bSlogan">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label fw-semibold">Téléphone</label>
+                <input type="text" class="form-control" name="telephone" id="bTel">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label fw-semibold">Email</label>
+                <input type="email" class="form-control" name="email" id="bEmail">
+            </div>
+            <div class="col-12">
+                <label class="form-label fw-semibold">Adresse</label>
+                <input type="text" class="form-control" name="adresse" id="bAdresse">
+            </div>
+            <div class="col-12">
+                <label class="form-label fw-semibold">Description</label>
+                <textarea class="form-control" name="description" id="bDesc" rows="3"></textarea>
+            </div>
+            <div class="col-12">
+                <button type="submit" class="btn-save"><i class="bi bi-check-circle me-1"></i> Enregistrer</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<div class="page-card">
+    <h6 class="fw-bold mb-3" style="color:#475569;">Changer mon mot de passe</h6>
+    <div id="pwAlert" class="alert" style="display:none;"></div>
+    <form id="pwForm">
+        <div class="mb-3">
+            <label class="form-label fw-semibold">Ancien mot de passe</label>
+            <input type="password" class="form-control" name="old_password" required>
+        </div>
+        <div class="mb-3">
+            <label class="form-label fw-semibold">Nouveau mot de passe</label>
+            <input type="password" class="form-control" name="new_password1" required>
+        </div>
+        <div class="mb-3">
+            <label class="form-label fw-semibold">Confirmer</label>
+            <input type="password" class="form-control" name="new_password2" required>
+        </div>
+        <button type="submit" class="btn-save"><i class="bi bi-lock me-1"></i> Changer</button>
+    </form>
+</div>
+
+<script>
+function getCSRFToken() {
+    return document.cookie.split('; ').find(r => r.startsWith('csrftoken'))?.split('=')[1];
+}
+
+// Charger infos boutique
+fetch('/api/boutiques/')
+.then(r => r.json())
+.then(data => {
+    if(!data.length) return;
+    const b = data[0];
+    document.getElementById('bNom').value    = b.nom || '';
+    document.getElementById('bSlogan').value = b.slogan || '';
+    document.getElementById('bTel').value    = b.telephone || '';
+    document.getElementById('bEmail').value  = b.email || '';
+    document.getElementById('bAdresse').value= b.adresse || '';
+    document.getElementById('bDesc').value   = b.description || '';
+    document.getElementById('boutiqueForm').dataset.id = b.id;
+});
+
+document.getElementById('boutiqueForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const id = this.dataset.id;
+    const data = Object.fromEntries(new FormData(this));
+    fetch(`/api/boutiques/${id}/`, {
+        method: 'PATCH',
+        headers: {'Content-Type':'application/json','X-CSRFToken':getCSRFToken()},
+        body: JSON.stringify(data)
+    })
+    .then(async r => {
+        const box = document.getElementById('alertBox');
+        box.style.display = 'block';
+        if(r.ok) {
+            box.className = 'alert alert-success';
+            box.innerText = '✅ Boutique mise à jour avec succès !';
+        } else {
+            box.className = 'alert alert-danger';
+            box.innerText = '❌ Erreur lors de la mise à jour.';
+        }
+        setTimeout(() => box.style.display = 'none', 4000);
+    });
+});
+
+document.getElementById('pwForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const data = Object.fromEntries(new FormData(this));
+    fetch('/api/change-password/', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json','X-CSRFToken':getCSRFToken()},
+        body: JSON.stringify(data)
+    })
+    .then(async r => {
+        const json = await r.json();
+        const box = document.getElementById('pwAlert');
+        box.style.display = 'block';
+        if(r.ok) {
+            box.className = 'alert alert-success';
+            box.innerText = '✅ ' + json.detail;
+            this.reset();
+        } else {
+            box.className = 'alert alert-danger';
+            box.innerText = '❌ ' + json.detail;
+        }
+        setTimeout(() => box.style.display = 'none', 4000);
+    });
+});
+</script>
+{% endblock %}

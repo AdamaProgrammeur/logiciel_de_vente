@@ -1,0 +1,269 @@
+{% extends "frontend_app/base.html" %}
+{% load static %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<style>
+/* ── FOND ── */
+body { background: #f0f2f5; }
+
+/* ── HEADER ── */
+.dash-title { font-size:1.5rem; font-weight:700; color:#1e3c72; margin-bottom:24px; }
+
+/* ── CARTES STATS ── */
+.stat-card {
+    border-radius:14px;
+    padding:20px 22px;
+    color:white;
+    display:flex;
+    align-items:center;
+    gap:16px;
+    box-shadow:0 4px 15px rgba(0,0,0,0.1);
+    transition:transform .2s;
+    margin-bottom:20px;
+}
+.stat-card:hover { transform:translateY(-4px); }
+.stat-card .icon {
+    width:54px; height:54px;
+    border-radius:12px;
+    background:rgba(255,255,255,0.2);
+    display:flex; align-items:center; justify-content:center;
+    font-size:1.6rem; flex-shrink:0;
+}
+.stat-card .info h6 { font-size:.75rem; text-transform:uppercase; letter-spacing:1px; opacity:.85; margin:0 0 4px; }
+.stat-card .info h2 { font-size:1.7rem; font-weight:800; margin:0; }
+.c1 { background:linear-gradient(135deg,#1e3c72,#2a5298); }
+.c2 { background:linear-gradient(135deg,#10b981,#059669); }
+.c3 { background:linear-gradient(135deg,#f59e0b,#d97706); }
+.c4 { background:linear-gradient(135deg,#8b5cf6,#6d28d9); }
+.c5 { background:linear-gradient(135deg,#ef4444,#b91c1c); }
+
+/* ── PANELS ── */
+.panel {
+    background:white;
+    border-radius:14px;
+    box-shadow:0 2px 10px rgba(0,0,0,0.07);
+    margin-bottom:24px;
+    overflow:hidden;
+}
+.panel-head {
+    padding:13px 18px;
+    font-weight:700;
+    font-size:.9rem;
+    color:white;
+    display:flex; align-items:center; gap:8px;
+}
+.ph-blue   { background:linear-gradient(90deg,#1e3c72,#2a5298); }
+.ph-green  { background:linear-gradient(90deg,#10b981,#059669); }
+.ph-yellow { background:linear-gradient(90deg,#f59e0b,#d97706); }
+
+/* ── TABLES ── */
+.dash-table { width:100%; border-collapse:collapse; font-size:.85rem; }
+.dash-table th {
+    background:#f8f9fa; padding:10px 14px;
+    font-size:.72rem; text-transform:uppercase;
+    letter-spacing:.6px; color:#666; border-bottom:2px solid #eee;
+}
+.dash-table td { padding:10px 14px; border-bottom:1px solid #f0f0f0; vertical-align:middle; }
+.dash-table tbody tr:hover { background:#f8f9ff; }
+.dash-table tbody tr:last-child td { border-bottom:none; }
+
+/* ── BADGES ── */
+.badge-ok      { background:#d1fae5; color:#065f46; padding:3px 10px; border-radius:20px; font-size:.72rem; font-weight:700; }
+.badge-partiel { background:#fef3c7; color:#92400e; padding:3px 10px; border-radius:20px; font-size:.72rem; font-weight:700; }
+.badge-attente { background:#fee2e2; color:#991b1b; padding:3px 10px; border-radius:20px; font-size:.72rem; font-weight:700; }
+.badge-alerte  { background:#fee2e2; color:#991b1b; padding:3px 8px; border-radius:20px; font-size:.7rem; }
+.badge-ok-stock{ background:#d1fae5; color:#065f46; padding:3px 8px; border-radius:20px; font-size:.7rem; }
+
+/* ── SCROLL ── */
+.scroll-wrap { max-height:300px; overflow-y:auto; }
+.scroll-wrap::-webkit-scrollbar { width:4px; }
+.scroll-wrap::-webkit-scrollbar-thumb { background:#ddd; border-radius:4px; }
+
+/* ── EMPTY ── */
+.empty { text-align:center; padding:24px; color:#bbb; font-size:.85rem; }
+</style>
+
+<!-- Titre -->
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <div class="dash-title">📊 Tableau de bord</div>
+    <span style="color:#888;font-size:.85rem;" id="dateNow"></span>
+</div>
+
+<!-- ── CARTES ── -->
+<div class="row g-3 mb-4">
+    <div class="col-xl col-md-4 col-6">
+        <div class="stat-card c1">
+            <div class="icon">📦</div>
+            <div class="info"><h6>Stock total</h6><h2 id="c-stock">—</h2></div>
+        </div>
+    </div>
+    <div class="col-xl col-md-4 col-6">
+        <div class="stat-card c2">
+            <div class="icon">🧾</div>
+            <div class="info"><h6>Nb ventes</h6><h2 id="c-ventes">—</h2></div>
+        </div>
+    </div>
+    <div class="col-xl col-md-4 col-6">
+        <div class="stat-card c3">
+            <div class="icon">💰</div>
+            <div class="info"><h6>Total paiements</h6><h2 id="c-paiements">—</h2></div>
+        </div>
+    </div>
+    <div class="col-xl col-md-4 col-6">
+        <div class="stat-card c4">
+            <div class="icon">💸</div>
+            <div class="info"><h6>Total dépenses</h6><h2 id="c-depenses">—</h2></div>
+        </div>
+    </div>
+    <div class="col-xl col-md-4 col-6">
+        <div class="stat-card c5">
+            <div class="icon">⏳</div>
+            <div class="info"><h6>Reste total</h6><h2 id="c-reste">—</h2></div>
+        </div>
+    </div>
+</div>
+
+<!-- ── STOCK + HISTORIQUE ── -->
+<div class="row g-3 mb-3">
+
+    <!-- Stock par produit -->
+    <div class="col-lg-4">
+        <div class="panel">
+            <div class="panel-head ph-blue">📦 Stock par produit</div>
+            <div class="scroll-wrap">
+                <table class="dash-table">
+                    <thead><tr><th>Produit</th><th>Stock</th><th>État</th></tr></thead>
+                    <tbody id="tStock"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Historique paiements par jour -->
+    <div class="col-lg-8">
+        <div class="panel">
+            <div class="panel-head ph-yellow">📅 Historique paiements par jour</div>
+            <div class="scroll-wrap">
+                <table class="dash-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th style="text-align:right;">Total paiements</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tHistorique"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- ── VENTES ── -->
+<div class="panel">
+    <div class="panel-head ph-green">🧾 Toutes les ventes</div>
+    <div class="scroll-wrap" style="max-height:400px;">
+        <table class="dash-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Client</th>
+                    <th>Produits</th>
+                    <th>Total</th>
+                    <th>Payé</th>
+                    <th>Reste</th>
+                    <th>Statut</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody id="tVentes"></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+document.getElementById('dateNow').innerText = new Date().toLocaleDateString('fr-FR', {
+    weekday:'long', day:'numeric', month:'long', year:'numeric'
+});
+
+fetch('/api/dashboard/')
+.then(r => r.json())
+.then(d => {
+
+    // ── Cartes ──
+    document.getElementById('c-stock').innerText     = Number(d.stock_total).toLocaleString();
+    document.getElementById('c-ventes').innerText    = Number(d.nb_ventes).toLocaleString();
+    document.getElementById('c-paiements').innerText = Number(d.total_paiements).toLocaleString();
+    document.getElementById('c-depenses').innerText  = Number(d.total_depenses).toLocaleString();
+    document.getElementById('c-reste').innerText     = Number(d.reste_total).toLocaleString();
+
+    // ── Stock par produit ──
+    const maxStock = Math.max(...d.stock_par_produit.map(p => p.stock), 1);
+    let sHTML = '';
+    d.stock_par_produit.forEach(p => {
+        const badge = p.stock <= 0
+            ? `<span class="badge-alerte">Rupture</span>`
+            : p.alerte
+                ? `<span class="badge-alerte">Faible</span>`
+                : `<span class="badge-ok-stock">OK</span>`;
+        const pct = Math.min((p.stock / maxStock) * 100, 100);
+        const color = p.stock <= 0 ? '#ef4444' : p.alerte ? '#f59e0b' : '#10b981';
+        sHTML += `<tr>
+            <td>${p.nom}</td>
+            <td>
+                <b>${p.stock}</b>
+                <div style="height:4px;background:#f0f0f0;border-radius:4px;margin-top:4px;">
+                    <div style="height:4px;width:${pct}%;background:${color};border-radius:4px;"></div>
+                </div>
+            </td>
+            <td>${badge}</td>
+        </tr>`;
+    });
+    document.getElementById('tStock').innerHTML = sHTML || `<tr><td colspan="3" class="empty">Aucun produit</td></tr>`;
+
+    // ── Historique paiements ──
+    let hHTML = '';
+    if(d.historique_paiements && d.historique_paiements.length) {
+        d.historique_paiements.slice().reverse().forEach(h => {
+            hHTML += `<tr>
+                <td><b>${h.date}</b></td>
+                <td style="text-align:right;color:#059669;font-weight:700;font-size:.95rem;">
+                    ${Number(h.total).toLocaleString()} FCF
+                </td>
+            </tr>`;
+        });
+    } else {
+        hHTML = `<tr><td colspan="2" class="empty">Aucun paiement enregistré</td></tr>`;
+    }
+    document.getElementById('tHistorique').innerHTML = hHTML;
+
+    // ── Ventes ──
+    let vHTML = '';
+    if(d.ventes && d.ventes.length) {
+        d.ventes.forEach(v => {
+            const badge = v.statut === 'OK'
+                ? `<span class="badge-ok">✅ OK</span>`
+                : v.statut === 'Partiel'
+                    ? `<span class="badge-partiel">⏳ Partiel</span>`
+                    : `<span class="badge-attente">🔴 En attente</span>`;
+            vHTML += `<tr>
+                <td style="color:#aaa;">#${v.id}</td>
+                <td><b>${v.client}</b></td>
+                <td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${v.produits}">${v.produits || '—'}</td>
+                <td><b>${Number(v.total).toLocaleString()}</b></td>
+                <td style="color:#059669;">${Number(v.paye).toLocaleString()}</td>
+                <td style="color:#ef4444;">${Number(v.reste).toLocaleString()}</td>
+                <td>${badge}</td>
+                <td style="color:#aaa;font-size:.8rem;">${v.date}</td>
+            </tr>`;
+        });
+    } else {
+        vHTML = `<tr><td colspan="8" class="empty">Aucune vente enregistrée</td></tr>`;
+    }
+    document.getElementById('tVentes').innerHTML = vHTML;
+
+})
+.catch(err => console.error('Erreur dashboard:', err));
+</script>
+{% endblock %}

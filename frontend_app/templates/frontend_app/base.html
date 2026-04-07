@@ -1,0 +1,175 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}Gestion Stock{% endblock %}</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+<style>
+* { box-sizing: border-box; }
+body { margin:0; font-family:'Segoe UI',sans-serif; background:#f0f2f5; }
+
+/* ── SIDEBAR ── */
+.sidebar {
+    width:240px; height:100vh;
+    background:linear-gradient(180deg,#0f172a 0%,#1e293b 100%);
+    position:fixed; top:0; left:0;
+    display:flex; flex-direction:column;
+    transition:.3s; z-index:1000; overflow-y:auto;
+}
+.sidebar::-webkit-scrollbar { width:3px; }
+.sidebar::-webkit-scrollbar-thumb { background:#334155; }
+
+/* Boutique header */
+.sb-brand {
+    padding:20px 16px 14px;
+    border-bottom:1px solid rgba(255,255,255,0.07);
+}
+.sb-brand .boutique-nom {
+    color:white; font-size:1rem; font-weight:700;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.sb-brand .user-info {
+    color:#94a3b8; font-size:.75rem; margin-top:4px;
+    display:flex; align-items:center; gap:6px;
+}
+.sb-brand .role-badge {
+    background:#2563eb; color:white;
+    font-size:.65rem; padding:1px 7px; border-radius:10px;
+}
+.sb-brand .role-badge.employe { background:#475569; }
+
+/* Nav */
+.sb-section {
+    color:#475569; font-size:.65rem; text-transform:uppercase;
+    letter-spacing:1px; padding:14px 16px 4px;
+}
+.sb-link {
+    display:flex; align-items:center; gap:10px;
+    padding:10px 16px; color:#cbd5e1;
+    text-decoration:none; font-size:.85rem;
+    transition:.15s; border-left:3px solid transparent;
+}
+.sb-link:hover { background:rgba(255,255,255,0.06); color:white; border-left-color:#3b82f6; }
+.sb-link.active { background:rgba(37,99,235,0.2); color:#60a5fa; border-left-color:#2563eb; }
+.sb-link i { font-size:1rem; width:20px; text-align:center; }
+
+.sb-divider { border-color:rgba(255,255,255,0.07); margin:6px 0; }
+
+/* ── MAIN ── */
+.main-content { margin-left:240px; padding:20px; min-height:100vh; transition:.3s; }
+
+/* ── TOPBAR ── */
+.topbar {
+    background:white; padding:10px 18px;
+    border-radius:12px; margin-bottom:20px;
+    display:flex; justify-content:space-between; align-items:center;
+    box-shadow:0 2px 8px rgba(0,0,0,0.06);
+}
+.topbar .menu-btn { font-size:1.3rem; cursor:pointer; color:#64748b; display:none; }
+.topbar .right { display:flex; align-items:center; gap:12px; }
+.topbar .user-chip {
+    background:#f1f5f9; border-radius:20px;
+    padding:5px 12px; font-size:.82rem; color:#334155;
+    display:flex; align-items:center; gap:6px;
+}
+.topbar .btn-logout {
+    background:#fee2e2; color:#b91c1c; border:none;
+    border-radius:8px; padding:6px 12px; font-size:.82rem;
+    cursor:pointer; transition:.2s;
+}
+.topbar .btn-logout:hover { background:#b91c1c; color:white; }
+
+@media(max-width:768px){
+    .sidebar { left:-240px; }
+    .sidebar.active { left:0; }
+    .main-content { margin-left:0; }
+    .topbar .menu-btn { display:block; }
+}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar" id="sidebar">
+
+    <!-- Boutique + User -->
+    <div class="sb-brand">
+        <div class="boutique-nom">
+            <i class="bi bi-shop me-1" style="color:#3b82f6;"></i>
+            {% if user.boutique %}{{ user.boutique.nom }}{% else %}Mon Stock{% endif %}
+        </div>
+        <div class="user-info">
+            <i class="bi bi-person-circle"></i>
+            {{ user.username }}
+            {% if user.role == 'admin' or user.is_staff %}
+                <span class="role-badge">Admin</span>
+            {% else %}
+                <span class="role-badge employe">Employé</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="sb-section">Principal</div>
+    {% if user.role == 'admin' or user.is_staff %}
+    <a href="{% url 'dashboard_page' %}" class="sb-link"><i class="bi bi-speedometer2"></i> Dashboard</a>
+    {% endif %}
+
+    <div class="sb-section">Catalogue</div>
+    <a href="{% url 'categories' %}" class="sb-link"><i class="bi bi-tags"></i> Catégories</a>
+    <a href="{% url 'produits' %}" class="sb-link"><i class="bi bi-box-seam"></i> Produits</a>
+
+    <div class="sb-section">Transactions</div>
+    <a href="{% url 'achats' %}" class="sb-link"><i class="bi bi-cart-plus"></i> Achats</a>
+    <a href="{% url 'ventes' %}" class="sb-link"><i class="bi bi-bag-check"></i> Ventes</a>
+    <a href="{% url 'paiements' %}" class="sb-link"><i class="bi bi-wallet2"></i> Paiements</a>
+    <a href="{% url 'depenses' %}" class="sb-link"><i class="bi bi-cash-stack"></i> Dépenses</a>
+
+    <div class="sb-section">Contacts</div>
+    <a href="{% url 'clients' %}" class="sb-link"><i class="bi bi-people"></i> Clients</a>
+    <a href="{% url 'fournisseurs' %}" class="sb-link"><i class="bi bi-truck"></i> Fournisseurs</a>
+
+    {% if user.role == 'admin' or user.is_staff %}
+    <hr class="sb-divider">
+    <div class="sb-section">Administration</div>
+    <a href="{% url 'utilisateurs' %}" class="sb-link"><i class="bi bi-people-fill"></i> Utilisateurs</a>
+    <a href="{% url 'parametres' %}" class="sb-link"><i class="bi bi-gear-fill"></i> Paramètres</a>
+    {% endif %}
+
+</div>
+
+<!-- MAIN -->
+<div class="main-content">
+
+    <!-- TOPBAR -->
+    <div class="topbar">
+        <span class="menu-btn" onclick="toggleSidebar()"><i class="bi bi-list"></i></span>
+        <div class="right">
+            <div class="user-chip">
+                <i class="bi bi-person-circle"></i> {{ user.username }}
+            </div>
+            <a href="{% url 'logout' %}" class="btn-logout">
+                <i class="bi bi-box-arrow-right"></i> Déconnexion
+            </a>
+        </div>
+    </div>
+
+    {% block content %}{% endblock %}
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('active');
+}
+// Marquer le lien actif
+document.querySelectorAll('.sb-link').forEach(a => {
+    if(a.href === window.location.href) a.classList.add('active');
+});
+</script>
+</body>
+</html>

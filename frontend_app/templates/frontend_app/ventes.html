@@ -1,0 +1,506 @@
+{% extends "frontend_app/base.html" %}
+{% load static %}
+{% block title %}Ventes{% endblock %}
+
+{% block content %}
+<style>
+.page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:10px; }
+.page-header h2 { font-weight:700; color:#1e3c72; margin:0; }
+.search-box { position:relative; }
+.search-box input { padding-left:38px; border-radius:20px; border:1px solid #dee2e6; width:240px; height:38px; font-size:.88rem; }
+.search-box i { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#aaa; }
+.btn-add { background:linear-gradient(135deg,#1e3c72,#2a5298); color:white; border:none; border-radius:10px; padding:8px 18px; font-size:.88rem; display:flex; align-items:center; gap:6px; transition:.2s; cursor:pointer; }
+.btn-add:hover { transform:translateY(-2px); box-shadow:0 4px 12px rgba(30,60,114,.3); }
+.table-card { background:white; border-radius:14px; box-shadow:0 2px 12px rgba(0,0,0,.07); overflow:hidden; }
+.table-card thead th { background:#1e3c72; color:white; font-size:.78rem; text-transform:uppercase; letter-spacing:.5px; padding:12px 16px; border:none; }
+.table-card tbody td { padding:11px 16px; vertical-align:middle; font-size:.88rem; border-bottom:1px solid #f0f0f0; }
+.table-card tbody tr:hover { background:#f8f9ff; }
+.table-card tbody tr:last-child td { border-bottom:none; }
+.btn-icon { width:32px; height:32px; border-radius:8px; border:none; display:inline-flex; align-items:center; justify-content:center; font-size:.85rem; transition:.2s; cursor:pointer; }
+.btn-icon:hover { transform:scale(1.1); }
+.btn-pay  { background:#d1fae5; color:#065f46; }
+.btn-pay:hover  { background:#10b981; color:white; }
+.btn-del  { background:#fde8e8; color:#c0392b; }
+.btn-del:hover  { background:#e74c3c; color:white; }
+.text-ok  { color:#059669; font-weight:700; }
+.text-due { color:#ef4444; font-weight:700; }
+.badge-ok      { background:#d1fae5; color:#065f46; padding:3px 10px; border-radius:20px; font-size:.72rem; font-weight:700; }
+.badge-partiel { background:#fef3c7; color:#92400e; padding:3px 10px; border-radius:20px; font-size:.72rem; font-weight:700; }
+.badge-attente { background:#fee2e2; color:#991b1b; padding:3px 10px; border-radius:20px; font-size:.72rem; font-weight:700; }
+.btn-print { background:#e0f2fe; color:#0369a1; }
+.btn-print:hover { background:#0369a1; color:white; }
+</style>
+
+<div class="page-header">
+    <h2><i class="bi bi-bag-check me-2" style="color:#2a5298;"></i>Gestion Ventes</h2>
+    <div class="d-flex gap-2 align-items-center flex-wrap">
+        <div class="search-box">
+            <i class="bi bi-search"></i>
+            <input type="text" id="searchInput" placeholder="Rechercher..." oninput="filterTable()">
+        </div>
+        <button class="btn-add" onclick="openModal()">
+            <i class="bi bi-bag-plus-fill"></i> Nouvelle vente
+        </button>
+    </div>
+</div>
+
+<div id="alertBox"></div>
+
+<div class="table-card">
+    <table class="table mb-0">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Client</th>
+                <th>Produits</th>
+                <th>Total</th>
+                <th>Payé</th>
+                <th>Reste</th>
+                <th>Statut</th>
+                <th>Date</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="ventes-list"></tbody>
+    </table>
+</div>
+
+<!-- MODAL VENTE -->
+<div class="modal fade" id="venteModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content" style="border-radius:14px;border:none;">
+      <div class="modal-header" style="background:linear-gradient(135deg,#1e3c72,#2a5298);color:white;border-radius:14px 14px 0 0;">
+        <h5 class="modal-title"><i class="bi bi-bag-plus me-2"></i>Nouvelle vente</h5>
+        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <form id="venteForm">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Client</label>
+            <select class="form-control" id="clientSelect">
+                <option value="">-- Client (optionnel) --</option>
+            </select>
+          </div>
+
+          <label class="form-label fw-semibold">Produits</label>
+          <table class="table table-bordered table-sm" id="produitsTable">
+            <thead class="table-light">
+              <tr>
+                <th>Produit</th>
+                <th style="width:100px;">Qté</th>
+                <th style="width:120px;">Prix</th>
+                <th style="width:100px;">Total</th>
+                <th style="width:40px;"></th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+
+          <button type="button" class="btn btn-outline-secondary btn-sm mb-3" onclick="addRow()">
+            <i class="bi bi-plus-circle me-1"></i> Ajouter produit
+          </button>
+
+          <div class="d-flex justify-content-end mb-3">
+            <span class="fw-bold">Total : <span id="totalGeneral" class="text-primary">0.00</span></span>
+          </div>
+
+          <button type="submit" class="btn w-100" style="background:linear-gradient(135deg,#1e3c72,#2a5298);color:white;border-radius:8px;">
+            <i class="bi bi-check-circle me-1"></i> Enregistrer
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PAIEMENT -->
+<div class="modal fade" id="paiementModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content" style="border-radius:14px;border:none;">
+      <div class="modal-header" style="background:linear-gradient(135deg,#059669,#047857);color:white;border-radius:14px 14px 0 0;">
+        <h5 class="modal-title"><i class="bi bi-cash-coin me-2"></i>Ajouter un paiement</h5>
+        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <form id="paiementForm">
+          <input type="hidden" id="venteIdPaiement">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Montant</label>
+            <input type="number" class="form-control" id="montantPaiement" min="0" step="0.01" required placeholder="0.00">
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Méthode</label>
+            <select class="form-control" id="methodePaiement">
+              <option value="Espèces">Espèces</option>
+              <option value="Mobile Money">Mobile Money</option>
+              <option value="Virement">Virement</option>
+              <option value="Chèque">Chèque</option>
+            </select>
+          </div>
+          <button type="submit" class="btn w-100" style="background:linear-gradient(135deg,#059669,#047857);color:white;border-radius:8px;">
+            <i class="bi bi-check-circle me-1"></i> Enregistrer paiement
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let produits = [];
+let modalInstance = null;
+let paiementModalInstance = null;
+
+function getCSRFToken() {
+    return document.cookie.split('; ').find(r => r.startsWith('csrftoken'))?.split('=')[1];
+}
+
+function showAlert(msg, type='success') {
+    const b = document.getElementById('alertBox');
+    b.innerHTML = `<div class="alert alert-${type} alert-dismissible fade show">${msg}<button class="btn-close" data-bs-dismiss="alert"></button></div>`;
+    setTimeout(() => b.innerHTML = '', 5000);
+}
+
+function openModal() {
+    document.getElementById('venteForm').reset();
+    document.querySelector('#produitsTable tbody').innerHTML = '';
+    document.getElementById('totalGeneral').innerText = '0.00';
+    modalInstance = new bootstrap.Modal(document.getElementById('venteModal'));
+    modalInstance.show();
+}
+
+function calc() {
+    let total = 0;
+    document.querySelectorAll('#produitsTable tbody tr').forEach(tr => {
+        const q = parseFloat(tr.querySelector('.qte').value) || 0;
+        const p = parseFloat(tr.querySelector('.prix').value) || 0;
+        const t = q * p;
+        tr.querySelector('.total').innerText = t.toFixed(2);
+        total += t;
+    });
+    document.getElementById('totalGeneral').innerText = total.toFixed(2);
+}
+
+function loadClients() {
+    fetch('/api/clients/')
+    .then(r => r.json())
+    .then(data => {
+        const sel = document.getElementById('clientSelect');
+        sel.innerHTML = '<option value="">-- Client (optionnel) --</option>';
+        data.forEach(c => sel.innerHTML += `<option value="${c.id}">${c.nom}</option>`);
+    });
+}
+
+function loadProduits() {
+    fetch('/api/produits/')
+    .then(r => r.json())
+    .then(data => { produits = data; });
+}
+
+function addRow(pId='', qte=1, prix=0) {
+    const tr = document.createElement('tr');
+    let opts = '<option value="">-- Produit --</option>';
+    produits.forEach(p => opts += `<option value="${p.id}" ${p.id==pId?'selected':''}>${p.nom} (stock: ${p.stock_actuelle})</option>`);
+    tr.innerHTML = `
+        <td><select class="form-control form-control-sm produit">${opts}</select></td>
+        <td><input type="number" class="form-control form-control-sm qte" value="${qte}" min="1"></td>
+        <td><input type="number" class="form-control form-control-sm prix" value="${prix}" min="0" step="0.01"></td>
+        <td class="total fw-bold">0.00</td>
+        <td><button type="button" class="btn btn-danger btn-sm" onclick="this.closest('tr').remove();calc()"><i class="bi bi-x"></i></button></td>
+    `;
+    tr.querySelector('.qte').oninput = calc;
+    tr.querySelector('.prix').oninput = calc;
+    tr.querySelector('.produit').onchange = function() {
+        const p = produits.find(x => x.id == this.value);
+        if(p) { tr.querySelector('.prix').value = parseFloat(p.prix) || 0; }
+        calc();
+    };
+    document.querySelector('#produitsTable tbody').appendChild(tr);
+    calc();
+}
+
+document.getElementById('venteForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const client = document.getElementById('clientSelect').value || null;
+    const produitsData = [];
+    document.querySelectorAll('#produitsTable tbody tr').forEach(tr => {
+        const produitId = parseInt(tr.querySelector('.produit').value);
+        const quantite  = parseInt(tr.querySelector('.qte').value);
+        const prix_unitaire = parseFloat(tr.querySelector('.prix').value);
+        if(produitId && quantite > 0) produitsData.push({ produit: produitId, quantite, prix_unitaire });
+    });
+    if(!produitsData.length) { showAlert('Ajoutez au moins un produit', 'danger'); return; }
+
+    fetch('/api/ventes/', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json','X-CSRFToken':getCSRFToken()},
+        body: JSON.stringify({ client, produits: produitsData })
+    })
+    .then(async r => {
+        if(!r.ok) { const err = await r.json(); showAlert('Erreur : ' + JSON.stringify(err), 'danger'); return null; }
+        return r.json();
+    })
+    .then(res => {
+        if(res) { modalInstance.hide(); loadVentes(); showAlert('Vente enregistrée !'); }
+    });
+});
+
+function ouvrirPaiement(venteId) {
+    document.getElementById('venteIdPaiement').value = venteId;
+    document.getElementById('montantPaiement').value = '';
+    paiementModalInstance = new bootstrap.Modal(document.getElementById('paiementModal'));
+    paiementModalInstance.show();
+}
+
+document.getElementById('paiementForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const venteId = document.getElementById('venteIdPaiement').value;
+    const montant = parseFloat(document.getElementById('montantPaiement').value);
+    const methode = document.getElementById('methodePaiement').value;
+    fetch('/api/paiements/', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json','X-CSRFToken':getCSRFToken()},
+        body: JSON.stringify({ vente: venteId, montant, methode })
+    })
+    .then(async r => {
+        if(!r.ok) { const err = await r.json(); showAlert('Erreur : ' + JSON.stringify(err), 'danger'); return null; }
+        return r.json();
+    })
+    .then(res => {
+        if(res) { paiementModalInstance.hide(); loadVentes(); showAlert('Paiement enregistré !'); }
+    });
+});
+
+function loadVentes() {
+    fetch('/api/ventes/')
+    .then(r => r.json())
+    .then(data => {
+        const tbody = document.getElementById('ventes-list');
+        tbody.innerHTML = '';
+        if(!data.length) {
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:24px;color:#aaa;">Aucune vente enregistrée</td></tr>';
+            return;
+        }
+        data.forEach(v => {
+            const produitsHTML = (v.produits || []).map(p =>
+                `<div><b>${p.produit_nom || ''}</b> : ${p.quantite} × ${parseFloat(p.prix_unitaire).toFixed(2)}</div>`
+            ).join('');
+            const total = parseFloat(v.total) || 0;
+            const paye  = parseFloat(v.montant_paye) || 0;
+            const reste = parseFloat(v.reste) || 0;
+            const badge = reste <= 0
+                ? '<span class="badge-ok">✅ OK</span>'
+                : paye > 0
+                    ? '<span class="badge-partiel">⏳ Partiel</span>'
+                    : '<span class="badge-attente">🔴 En attente</span>';
+            const tr = document.createElement('tr');
+            tr.dataset.search = `${(v.client_nom||'anonyme').toLowerCase()}`;
+            tr.innerHTML = `
+                <td><span style="color:#aaa;font-size:.8rem;">#${v.id}</span></td>
+                <td><b>${v.client_nom || 'Anonyme'}</b></td>
+                <td>${produitsHTML}</td>
+                <td><b>${total.toLocaleString()}</b></td>
+                <td class="text-ok">${paye.toLocaleString()}</td>
+                <td class="${reste > 0 ? 'text-due' : 'text-ok'}">${reste.toLocaleString()}</td>
+                <td>${badge}</td>
+                <td style="font-size:.82rem;color:#888;">${v.date ? new Date(v.date).toLocaleString() : ''}</td>
+                <td>
+                    <div style="display:flex;align-items:center;gap:4px;">
+                        ${reste > 0 ? `<button class="btn-icon btn-pay" onclick="ouvrirPaiement(${v.id})" title="Payer"><i class="bi bi-cash-coin"></i></button>` : '<span style="width:32px;display:inline-block;"></span>'}
+                        <button class="btn-icon btn-print" onclick="imprimerFacture(${v.id})" title="Imprimer facture"><i class="bi bi-printer-fill"></i></button>
+                        <button class="btn-icon btn-del" onclick="delVente(${v.id})" title="Supprimer"><i class="bi bi-trash-fill"></i></button>
+                    </div>
+                </td>`;
+            tbody.appendChild(tr);
+        });
+    });
+}
+
+function imprimerFacture(id) {
+    fetch('/api/ventes/' + id + '/')
+    .then(r => r.json())
+    .then(vente => {
+        fetch('/api/boutiques/')
+        .then(r => r.json())
+        .then(bData => {
+            const boutique = Array.isArray(bData) ? bData[0] : (bData.results ? bData.results[0] : bData);
+            const total   = parseFloat(vente.total) || 0;
+            const paye    = parseFloat(vente.montant_paye) || 0;
+            const reste   = parseFloat(vente.reste) || 0;
+            const statut  = reste <= 0 ? 'SOLDÉ' : paye > 0 ? 'PARTIEL' : 'EN ATTENTE';
+            const statutColor = reste <= 0 ? '#059669' : paye > 0 ? '#d97706' : '#dc2626';
+            const date    = vente.date ? new Date(vente.date).toLocaleString('fr-FR') : '';
+            const lignes  = (vente.produits || []).map((p, i) => `
+                <tr>
+                    <td>${i+1}</td>
+                    <td>${p.produit_nom || ''}</td>
+                    <td style="text-align:center;">${p.quantite}</td>
+                    <td style="text-align:right;">${parseFloat(p.prix_unitaire).toLocaleString('fr-FR')} FCFA</td>
+                    <td style="text-align:right;font-weight:700;">${parseFloat(p.total).toLocaleString('fr-FR')} FCFA</td>
+                </tr>`).join('');
+
+            const html = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Facture #${vente.id}</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Segoe UI',Arial,sans-serif; background:#f5f5f5; padding:30px; color:#1a1a1a; }
+  .facture { background:white; max-width:750px; margin:0 auto; border-radius:12px;
+             box-shadow:0 4px 24px rgba(0,0,0,0.12); overflow:hidden; }
+  /* HEADER */
+  .header { background:linear-gradient(135deg,#1e3c72,#2a5298); color:white; padding:32px 36px; display:flex; justify-content:space-between; align-items:flex-start; }
+  .header .boutique-nom { font-size:1.6rem; font-weight:800; letter-spacing:.5px; }
+  .header .boutique-info { font-size:.82rem; opacity:.85; margin-top:6px; line-height:1.7; }
+  .header .facture-num { text-align:right; }
+  .header .facture-num .label { font-size:.75rem; opacity:.7; text-transform:uppercase; letter-spacing:1px; }
+  .header .facture-num .num { font-size:2rem; font-weight:800; }
+  .header .facture-num .date { font-size:.8rem; opacity:.8; margin-top:4px; }
+  /* STATUT BADGE */
+  .statut-bar { background:#f8fafc; padding:12px 36px; border-bottom:1px solid #e2e8f0; display:flex; justify-content:flex-end; }
+  .statut-badge { padding:5px 18px; border-radius:20px; font-size:.78rem; font-weight:800;
+                  letter-spacing:.5px; border:2px solid ${statutColor}; color:${statutColor}; }
+  /* CLIENT */
+  .body { padding:28px 36px; }
+  .section-row { display:flex; gap:24px; margin-bottom:28px; }
+  .box { flex:1; background:#f8fafc; border-radius:10px; padding:16px 20px; border:1px solid #e2e8f0; }
+  .box .box-title { font-size:.68rem; text-transform:uppercase; letter-spacing:1px; color:#64748b; font-weight:700; margin-bottom:10px; }
+  .box .box-val { font-size:.92rem; color:#1e293b; line-height:1.7; }
+  .box .box-val strong { font-size:1rem; color:#0f172a; }
+  /* TABLE */
+  table { width:100%; border-collapse:collapse; margin-bottom:24px; }
+  thead tr { background:#1e3c72; color:white; }
+  thead th { padding:10px 14px; font-size:.75rem; text-transform:uppercase; letter-spacing:.5px; font-weight:600; }
+  tbody tr { border-bottom:1px solid #f1f5f9; }
+  tbody tr:last-child { border-bottom:none; }
+  tbody td { padding:11px 14px; font-size:.88rem; }
+  tbody tr:nth-child(even) { background:#f8fafc; }
+  /* TOTAUX */
+  .totaux { display:flex; justify-content:flex-end; }
+  .totaux-box { width:280px; }
+  .totaux-row { display:flex; justify-content:space-between; padding:7px 0; font-size:.88rem; border-bottom:1px solid #f1f5f9; }
+  .totaux-row:last-child { border-bottom:none; }
+  .totaux-row.total-final { font-size:1rem; font-weight:800; color:#1e3c72; padding-top:12px; }
+  .totaux-row.paye { color:#059669; font-weight:700; }
+  .totaux-row.reste { color:${reste > 0 ? '#dc2626' : '#059669'}; font-weight:700; }
+  /* FOOTER */
+  .footer { background:#f8fafc; border-top:1px solid #e2e8f0; padding:18px 36px; text-align:center; font-size:.75rem; color:#94a3b8; }
+  .footer strong { color:#64748b; }
+  @media print {
+    body { background:white; padding:0; }
+    .facture { box-shadow:none; border-radius:0; }
+    .no-print { display:none; }
+  }
+</style>
+</head>
+<body>
+<div class="facture">
+  <!-- HEADER -->
+  <div class="header">
+    <div>
+      <div class="boutique-nom">🏪 ${boutique ? boutique.nom : 'Ma Boutique'}</div>
+      <div class="boutique-info">
+        ${boutique && boutique.telephone ? '📞 ' + boutique.telephone + '<br>' : ''}
+        ${boutique && boutique.adresse ? '📍 ' + boutique.adresse + '<br>' : ''}
+        ${boutique && boutique.email ? '✉️ ' + boutique.email : ''}
+      </div>
+    </div>
+    <div class="facture-num">
+      <div class="label">Facture</div>
+      <div class="num">#${String(vente.id).padStart(4,'0')}</div>
+      <div class="date">${date}</div>
+    </div>
+  </div>
+
+  <!-- STATUT -->
+  <div class="statut-bar">
+    <div class="statut-badge">${statut}</div>
+  </div>
+
+  <!-- CLIENT + INFOS -->
+  <div class="body">
+    <div class="section-row">
+      <div class="box">
+        <div class="box-title">👤 Client</div>
+        <div class="box-val"><strong>${vente.client_nom || 'Client anonyme'}</strong></div>
+      </div>
+      <div class="box">
+        <div class="box-title">📅 Date de vente</div>
+        <div class="box-val"><strong>${date}</strong></div>
+      </div>
+    </div>
+
+    <!-- PRODUITS -->
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Désignation</th>
+          <th style="text-align:center;">Qté</th>
+          <th style="text-align:right;">Prix unit.</th>
+          <th style="text-align:right;">Total</th>
+        </tr>
+      </thead>
+      <tbody>${lignes}</tbody>
+    </table>
+
+    <!-- TOTAUX -->
+    <div class="totaux">
+      <div class="totaux-box">
+        <div class="totaux-row total-final">
+          <span>Total</span><span>${total.toLocaleString('fr-FR')} FCFA</span>
+        </div>
+        <div class="totaux-row paye">
+          <span>✅ Montant payé</span><span>${paye.toLocaleString('fr-FR')} FCFA</span>
+        </div>
+        <div class="totaux-row reste">
+          <span>${reste > 0 ? '⚠️ Reste à payer' : '✅ Reste à payer'}</span>
+          <span>${reste.toLocaleString('fr-FR')} FCFA</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <strong>Merci pour votre confiance !</strong><br>
+    Propulsé par <strong>StockPro</strong> — Adama Programmeur · 📞 +223 78 74 66 43
+  </div>
+</div>
+
+<div class="no-print" style="text-align:center;margin-top:20px;">
+  <button onclick="window.print()" style="background:#1e3c72;color:white;border:none;padding:12px 32px;border-radius:8px;font-size:1rem;cursor:pointer;font-weight:600;">
+    🖨️ Imprimer / Enregistrer PDF
+  </button>
+  <button onclick="window.close()" style="background:#e2e8f0;color:#334155;border:none;padding:12px 24px;border-radius:8px;font-size:1rem;cursor:pointer;margin-left:10px;">
+    ✖ Fermer
+  </button>
+</div>
+</body></html>`;
+
+            const win = window.open('', '_blank', 'width=820,height=900');
+            win.document.write(html);
+            win.document.close();
+        });
+    });
+}
+
+function delVente(id) {
+    if(!confirm('Supprimer cette vente ?')) return;
+    fetch(`/api/ventes/${id}/`, { method:'DELETE', headers:{'X-CSRFToken':getCSRFToken()} })
+    .then(() => { loadVentes(); showAlert('Vente supprimée.', 'warning'); });
+}
+
+function filterTable() {
+    const q = document.getElementById('searchInput').value.toLowerCase();
+    document.querySelectorAll('#ventes-list tr[data-search]').forEach(r => {
+        r.style.display = r.dataset.search.includes(q) ? '' : 'none';
+    });
+}
+
+loadClients();
+loadProduits();
+loadVentes();
+</script>
+{% endblock %}

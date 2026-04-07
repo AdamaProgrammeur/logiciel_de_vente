@@ -1,0 +1,215 @@
+{% extends "frontend_app/base.html" %}
+{% block title %}Utilisateurs{% endblock %}
+{% block content %}
+<style>
+.page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:10px; }
+.page-header h2 { font-weight:700; color:#1e3c72; margin:0; }
+.btn-add { background:linear-gradient(135deg,#1e3c72,#2a5298); color:white; border:none; border-radius:10px; padding:8px 18px; font-size:.88rem; display:flex; align-items:center; gap:6px; transition:.2s; cursor:pointer; }
+.btn-add:hover { transform:translateY(-2px); box-shadow:0 4px 12px rgba(30,60,114,.3); }
+.table-card { background:white; border-radius:14px; box-shadow:0 2px 12px rgba(0,0,0,.07); overflow:hidden; }
+.table-card thead th { background:#1e3c72; color:white; font-size:.78rem; text-transform:uppercase; letter-spacing:.5px; padding:12px 16px; border:none; }
+.table-card tbody td { padding:11px 16px; vertical-align:middle; font-size:.88rem; border-bottom:1px solid #f0f0f0; }
+.table-card tbody tr:hover { background:#f8f9ff; }
+.table-card tbody tr:last-child td { border-bottom:none; }
+.btn-icon { width:32px; height:32px; border-radius:8px; border:none; display:inline-flex; align-items:center; justify-content:center; font-size:.85rem; transition:.2s; cursor:pointer; }
+.btn-icon:hover { transform:scale(1.1); }
+.btn-edit { background:#fff3cd; color:#856404; }
+.btn-edit:hover { background:#ffc107; color:white; }
+.btn-del { background:#fde8e8; color:#c0392b; }
+.btn-del:hover { background:#e74c3c; color:white; }
+.btn-pw { background:#e0e7ff; color:#3730a3; }
+.btn-pw:hover { background:#4f46e5; color:white; }
+.role-admin { background:#dbeafe; color:#1d4ed8; padding:3px 10px; border-radius:20px; font-size:.72rem; font-weight:700; }
+.role-employe { background:#f1f5f9; color:#475569; padding:3px 10px; border-radius:20px; font-size:.72rem; font-weight:700; }
+</style>
+
+<div class="page-header">
+    <h2><i class="bi bi-people-fill me-2" style="color:#2a5298;"></i>Gestion Utilisateurs</h2>
+    <button class="btn-add" data-bs-toggle="modal" data-bs-target="#userModal">
+        <i class="bi bi-person-plus-fill"></i> Nouvel utilisateur
+    </button>
+</div>
+
+<div class="table-card">
+    <table class="table mb-0">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Nom d'utilisateur</th>
+                <th>Email</th>
+                <th>Rôle</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="users-list"></tbody>
+    </table>
+</div>
+
+<!-- Modal Ajouter/Modifier -->
+<div class="modal fade" id="userModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content" style="border-radius:14px;border:none;">
+      <div class="modal-header" style="background:linear-gradient(135deg,#1e3c72,#2a5298);color:white;border-radius:14px 14px 0 0;">
+        <h5 class="modal-title"><i class="bi bi-person-plus me-2"></i><span id="modalTitle">Nouvel utilisateur</span></h5>
+        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <form id="userForm">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Nom d'utilisateur</label>
+            <input type="text" class="form-control" name="username" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Email</label>
+            <input type="email" class="form-control" name="email" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Rôle</label>
+            <select class="form-control" name="role">
+                <option value="employe">Employé</option>
+                <option value="admin">Admin</option>
+            </select>
+          </div>
+          <div class="mb-3" id="pwField">
+            <label class="form-label fw-semibold">Mot de passe</label>
+            <input type="password" class="form-control" name="password" placeholder="Laisser vide pour ne pas changer">
+          </div>
+          <button type="submit" class="btn w-100" style="background:linear-gradient(135deg,#1e3c72,#2a5298);color:white;border-radius:8px;">
+            <i class="bi bi-check-circle me-1"></i> Enregistrer
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Reset Password -->
+<div class="modal fade" id="pwModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content" style="border-radius:14px;border:none;">
+      <div class="modal-header" style="background:linear-gradient(135deg,#4f46e5,#7c3aed);color:white;border-radius:14px 14px 0 0;">
+        <h5 class="modal-title"><i class="bi bi-lock me-2"></i>Réinitialiser mot de passe</h5>
+        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <p style="color:#64748b;font-size:.88rem;">Définir un nouveau mot de passe pour <b id="pwUsername"></b></p>
+        <form id="pwResetForm">
+          <input type="hidden" id="pwUserId">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Nouveau mot de passe</label>
+            <input type="password" class="form-control" id="newPw" required>
+          </div>
+          <button type="submit" class="btn w-100" style="background:linear-gradient(135deg,#4f46e5,#7c3aed);color:white;border-radius:8px;">
+            <i class="bi bi-lock me-1"></i> Enregistrer
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let allUsers = [];
+
+function getCSRFToken() {
+    return document.cookie.split('; ').find(r => r.startsWith('csrftoken'))?.split('=')[1];
+}
+
+function loadUsers() {
+    fetch('/api/utilisateurs/')
+    .then(r => r.json())
+    .then(data => {
+        allUsers = data;
+        const tbody = document.getElementById('users-list');
+        tbody.innerHTML = '';
+        if(!data.length) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:#aaa;">Aucun utilisateur</td></tr>';
+            return;
+        }
+        data.forEach(u => {
+            const roleBadge = u.role === 'admin'
+                ? `<span class="role-admin"><i class="bi bi-shield-fill me-1"></i>Admin</span>`
+                : `<span class="role-employe"><i class="bi bi-person me-1"></i>Employé</span>`;
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><span style="color:#aaa;font-size:.8rem;">#${u.id}</span></td>
+                <td><b>${u.username}</b></td>
+                <td>${u.email || '—'}</td>
+                <td>${roleBadge}</td>
+                <td>
+                    <button class="btn-icon btn-edit me-1" onclick="editUser(${u.id})" title="Modifier"><i class="bi bi-pencil-fill"></i></button>
+                    <button class="btn-icon btn-pw me-1" onclick="openPwModal(${u.id}, '${u.username}')" title="Reset mot de passe"><i class="bi bi-lock-fill"></i></button>
+                    <button class="btn-icon btn-del" onclick="deleteUser(${u.id})" title="Supprimer"><i class="bi bi-trash-fill"></i></button>
+                </td>`;
+            tbody.appendChild(tr);
+        });
+    });
+}
+
+document.getElementById('userForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const form = e.target;
+    const data = Object.fromEntries(new FormData(form));
+    if(!data.password) delete data.password;
+    let url = '/api/utilisateurs/', method = 'POST';
+    if(form.dataset.editId) { url += form.dataset.editId + '/'; method = 'PATCH'; delete form.dataset.editId; }
+    fetch(url, { method, headers: {'Content-Type':'application/json','X-CSRFToken':getCSRFToken()}, body: JSON.stringify(data) })
+    .then(async r => {
+        if(!r.ok) { const err = await r.json(); alert(JSON.stringify(err)); return; }
+        loadUsers();
+        form.reset();
+        bootstrap.Modal.getInstance(document.getElementById('userModal')).hide();
+    });
+});
+
+function editUser(id) {
+    const u = allUsers.find(x => x.id === id);
+    if(!u) return;
+    const form = document.getElementById('userForm');
+    form.username.value = u.username;
+    form.email.value = u.email || '';
+    form.role.value = u.role || 'employe';
+    form.dataset.editId = id;
+    document.getElementById('modalTitle').innerText = 'Modifier utilisateur';
+    new bootstrap.Modal(document.getElementById('userModal')).show();
+}
+
+function openPwModal(id, username) {
+    document.getElementById('pwUserId').value = id;
+    document.getElementById('pwUsername').innerText = username;
+    document.getElementById('newPw').value = '';
+    new bootstrap.Modal(document.getElementById('pwModal')).show();
+}
+
+document.getElementById('pwResetForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const id = document.getElementById('pwUserId').value;
+    const password = document.getElementById('newPw').value;
+    fetch(`/api/utilisateurs/${id}/`, {
+        method: 'PATCH',
+        headers: {'Content-Type':'application/json','X-CSRFToken':getCSRFToken()},
+        body: JSON.stringify({ password })
+    })
+    .then(r => {
+        if(r.ok) {
+            bootstrap.Modal.getInstance(document.getElementById('pwModal')).hide();
+            alert('✅ Mot de passe mis à jour !');
+        }
+    });
+});
+
+function deleteUser(id) {
+    if(!confirm('Supprimer cet utilisateur ?')) return;
+    fetch(`/api/utilisateurs/${id}/`, { method:'DELETE', headers:{'X-CSRFToken':getCSRFToken()} })
+    .then(() => loadUsers());
+}
+
+document.getElementById('userModal').addEventListener('hidden.bs.modal', () => {
+    document.getElementById('userForm').reset();
+    delete document.getElementById('userForm').dataset.editId;
+    document.getElementById('modalTitle').innerText = 'Nouvel utilisateur';
+});
+
+loadUsers();
+</script>
+{% endblock %}
