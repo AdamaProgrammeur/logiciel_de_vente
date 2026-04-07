@@ -218,6 +218,124 @@ class DashboardView(APIView):
         })
 
 
+class AlertesView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        boutique = request.user.boutique
+        produits = Produit.objects.filter(boutique=boutique, alerte_stock=True).select_related('categorie')
+        data = [{
+            'id': p.id,
+            'nom': p.nom,
+            'stock_actuelle': p.stock_actuelle,
+            'seuil_alerte': p.seuil_alerte,
+            'prix': float(p.prix),
+            'categorie': p.categorie.nom if p.categorie else None,
+            'statut': 'rupture' if p.stock_actuelle <= 0 else 'faible',
+        } for p in produits]
+        return Response({'count': len(data), 'produits': data})
+
+
+class RapportView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        boutique = request.user.boutique
+        date_debut = request.query_params.get('debut')
+        date_fin = request.query_params.get('fin')
+
+        ventes_qs = Vente.objects.filter(boutique=boutique)
+        paiements_qs = Paiement.objects.filter(boutique=boutique)
+        depenses_qs = Depense.objects.filter(boutique=boutique)
+        entrees_qs = EntreeStock.objects.filter(boutique=boutique).prefetch_related('produits')
+
+        if date_debut:
+            ventes_qs = ventes_qs.filter(date__date__gte=date_debut)
+            paiements_qs = paiements_qs.filter(date__date__gte=date_debut)
+            depenses_qs = depenses_qs.filter(date__date__gte=date_debut)
+            entrees_qs = entrees_qs.filter(date__date__gte=date_debut)
+        if date_fin:
+            ventes_qs = ventes_qs.filter(date__date__lte=date_fin)
+            paiements_qs = paiements_qs.filter(date__date__lte=date_fin)
+            depenses_qs = depenses_qs.filter(date__date__lte=date_fin)
+            entrees_qs = entrees_qs.filter(date__date__lte=date_fin)
+
+        total_ventes = float(ventes_qs.aggregate(t=Sum('total'))['t'] or 0)
+        total_encaisse = float(paiements_qs.aggregate(t=Sum('montant'))['t'] or 0)
+        total_depenses = float(depenses_qs.aggregate(t=Sum('montant'))['t'] or 0)
+        total_achats = float(sum(
+            sum(p.quantite * p.prix_unitaire for p in e.produits.all())
+            for e in entrees_qs
+        ))
+        benefice = total_encaisse - total_achats - total_depenses
+
+        return Response({
+            'total_ventes': total_ventes,
+            'total_encaisse': total_encaisse,
+            'total_achats': total_achats,
+            'total_depenses': total_depenses,
+            'benefice': benefice,
+            'nb_ventes': ventes_qs.count(),
+            'nb_achats': entrees_qs.count(),
+        })
+
+
+class TracesView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        boutique = request.user.boutique
+        traces = []
+
+        for v in Vente.objects.filter(boutique=boutique).prefetch_related('produits__produit', 'client').order_by('-date'):
+            traces.append({
+                'type': 'vente',
+                'icone': 'bag-check',
+                'couleur': '#16a34a',
+                'description': f"Vente #{v.id} — {v.client.nom if v.client else 'Anonyme'}",
+                'montant': float(v.total),
+                'date': v.date.strftime('%d/%m/%Y %H:%M'),
+                'detail': ', '.join(f"{pv.produit.nom} x{pv.quantite}" for pv in v.produits.all()),
+            })
+
+        for e in EntreeStock.objects.filter(boutique=boutique).prefetch_related('produits__produit', 'fournisseur').order_by('-date'):
+            total = float(sum(p.quantite * p.prix_unitaire for p in e.produits.all()))
+            traces.append({
+                'type': 'achat',
+                'icone': 'cart-plus',
+                'couleur': '#2563eb',
+                'description': f"Achat #{e.id} — {e.fournisseur.nom if e.fournisseur else 'Sans fournisseur'}",
+                'montant': total,
+                'date': e.date.strftime('%d/%m/%Y %H:%M'),
+                'detail': ', '.join(f"{p.produit.nom} x{p.quantite}" for p in e.produits.all()),
+            })
+
+        for p in Paiement.objects.filter(boutique=boutique).select_related('vente__client').order_by('-date'):
+            traces.append({
+                'type': 'paiement',
+                'icone': 'wallet2',
+                'couleur': '#7c3aed',
+                'description': f"Paiement — {p.vente.client.nom if p.vente.client else 'Anonyme'} ({p.methode})",
+                'montant': float(p.montant),
+                'date': p.date.strftime('%d/%m/%Y %H:%M'),
+                'detail': f"Vente #{p.vente.id}",
+            })
+
+        for d in Depense.objects.filter(boutique=boutique).order_by('-date'):
+            traces.append({
+                'type': 'depense',
+                'icone': 'cash-stack',
+                'couleur': '#dc2626',
+                'description': f"Dépense — {d.description}",
+                'montant': float(d.montant),
+                'date': d.date.strftime('%d/%m/%Y %H:%M'),
+                'detail': '',
+            })
+
+        traces.sort(key=lambda x: x['date'], reverse=True)
+        return Response(traces)
+
+
 @login_required
 @csrf_exempt
 def change_password(request):

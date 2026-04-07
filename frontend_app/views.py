@@ -70,6 +70,14 @@ def depenses_view(request):
     return render(request, 'frontend_app/depenses.html')
 
 @boutique_approuvee_required
+def alertes_view(request):
+    return render(request, 'frontend_app/alertes.html')
+
+@boutique_approuvee_required
+def rapports_view(request):
+    return render(request, 'frontend_app/rapports.html')
+
+@boutique_approuvee_required
 def parametres_view(request):
     return render(request, 'frontend_app/parametres.html')
 

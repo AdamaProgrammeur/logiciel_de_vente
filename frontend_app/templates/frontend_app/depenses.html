@@ -3,56 +3,96 @@
 {% block title %}Dépenses{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h2>Dépenses</h2>
-    <button class="btn btn-danger" onclick="openModal()">
-        <i class="bi bi-plus-lg"></i> Ajouter Dépense
-    </button>
-</div>
+<style>
+.page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:10px; }
+.page-header h2 { font-weight:700; color:#1e3c72; margin:0; }
+.search-box { position:relative; }
+.search-box input { padding-left:38px; border-radius:20px; border:1px solid #dee2e6; width:240px; height:38px; font-size:.88rem; }
+.search-box i { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#aaa; }
+.btn-add { background:linear-gradient(135deg,#dc2626,#b91c1c); color:white; border:none; border-radius:10px; padding:8px 18px; font-size:.88rem; display:flex; align-items:center; gap:6px; transition:.2s; cursor:pointer; }
+.btn-add:hover { transform:translateY(-2px); box-shadow:0 4px 12px rgba(220,38,38,.3); }
+.sum-card { background:white; border-radius:14px; box-shadow:0 2px 12px rgba(0,0,0,.07); padding:18px 20px; margin-bottom:20px; display:flex; align-items:center; gap:16px; max-width:280px; }
+.sum-card .ic { width:48px; height:48px; border-radius:12px; background:#fee2e2; color:#dc2626; display:flex; align-items:center; justify-content:center; font-size:1.4rem; flex-shrink:0; }
+.sum-card .val { font-size:1.4rem; font-weight:800; color:#dc2626; }
+.sum-card .lbl { font-size:.75rem; color:#94a3b8; text-transform:uppercase; letter-spacing:.5px; }
+.table-card { background:white; border-radius:14px; box-shadow:0 2px 12px rgba(0,0,0,.07); overflow:hidden; }
+.table-card thead th { background:#1e3c72; color:white; font-size:.78rem; text-transform:uppercase; letter-spacing:.5px; padding:12px 16px; border:none; }
+.table-card tbody td { padding:11px 16px; vertical-align:middle; font-size:.88rem; border-bottom:1px solid #f0f0f0; }
+.table-card tbody tr:hover { background:#fff8f8; }
+.table-card tbody tr:last-child td { border-bottom:none; }
+.btn-icon { width:32px; height:32px; border-radius:8px; border:none; display:inline-flex; align-items:center; justify-content:center; font-size:.85rem; transition:.2s; cursor:pointer; }
+.btn-icon:hover { transform:scale(1.1); }
+.btn-edit { background:#fff3cd; color:#856404; }
+.btn-edit:hover { background:#ffc107; color:white; }
+.btn-del { background:#fde8e8; color:#c0392b; }
+.btn-del:hover { background:#e74c3c; color:white; }
+.empty-row td { text-align:center; padding:30px; color:#aaa; font-size:.9rem; }
+.alerte-montant { background:#fff7ed; border:1px solid #fed7aa; border-radius:8px; padding:8px 14px; font-size:.82rem; color:#c2410c; display:none; margin-top:6px; }
+</style>
 
-<div class="row mb-3">
-    <div class="col-md-3">
-        <div class="card text-white bg-danger">
-            <div class="card-body text-center">
-                <h6>Total dépenses</h6>
-                <h3 id="totalDepenses">—</h3>
-            </div>
+<div class="page-header">
+    <h2><i class="bi bi-cash-stack me-2" style="color:#dc2626;"></i>Dépenses</h2>
+    <div class="d-flex gap-2 align-items-center flex-wrap">
+        <div class="search-box">
+            <i class="bi bi-search"></i>
+            <input type="text" id="searchInput" placeholder="Rechercher..." oninput="filterTable()">
         </div>
+        <button class="btn-add" onclick="openModal()">
+            <i class="bi bi-plus-circle-fill"></i> Ajouter dépense
+        </button>
     </div>
 </div>
 
-<table class="table table-striped table-hover">
-    <thead class="table-dark">
-        <tr>
-            <th>ID</th>
-            <th>Description</th>
-            <th>Montant</th>
-            <th>Date</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody id="depenses-list"></tbody>
-</table>
+<div class="sum-card">
+    <div class="ic"><i class="bi bi-cash-stack"></i></div>
+    <div>
+        <div class="val" id="totalDepenses">—</div>
+        <div class="lbl">Total dépenses</div>
+    </div>
+</div>
 
-<!-- MODAL -->
-<div class="modal fade" id="depenseModal">
+<div id="alertBox"></div>
+
+<div class="table-card">
+    <table class="table mb-0">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Description</th>
+                <th>Montant</th>
+                <th>Date</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="depenses-list"></tbody>
+    </table>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="depenseModal" tabindex="-1">
   <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Dépense</h5>
-        <button class="btn-close" data-bs-dismiss="modal"></button>
+    <div class="modal-content" style="border-radius:14px;border:none;">
+      <div class="modal-header" style="background:linear-gradient(135deg,#dc2626,#b91c1c);color:white;border-radius:14px 14px 0 0;">
+        <h5 class="modal-title"><i class="bi bi-cash-stack me-2"></i><span id="modalTitle">Nouvelle dépense</span></h5>
+        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
-      <div class="modal-body">
+      <div class="modal-body p-4">
         <form id="depenseForm">
           <div class="mb-3">
-            <label>Description</label>
+            <label class="form-label fw-semibold">Description</label>
             <input type="text" class="form-control" id="description" required placeholder="Ex: Loyer, Électricité...">
           </div>
           <div class="mb-3">
-            <label>Montant</label>
-            <input type="number" class="form-control" id="montant" min="0" step="0.01" required>
+            <label class="form-label fw-semibold">Montant</label>
+            <input type="number" class="form-control" id="montant" min="0" step="0.01" required oninput="checkMontant(this.value)">
+            <div class="alerte-montant" id="alerteMontant">
+                <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                Montant élevé ! Veuillez vérifier avant d'enregistrer.
+            </div>
           </div>
-          <button class="btn btn-danger w-100">Enregistrer</button>
+          <button type="submit" class="btn w-100" style="background:linear-gradient(135deg,#dc2626,#b91c1c);color:white;border-radius:8px;">
+            <i class="bi bi-check-circle me-1"></i> Enregistrer
+          </button>
         </form>
       </div>
     </div>
@@ -60,73 +100,107 @@
 </div>
 
 <script>
+const SEUIL_ALERTE_DEPENSE = 500000;
 let editId = null;
 let modalInstance = null;
 
-function getCSRFToken(){
+function getCSRFToken() {
     return document.cookie.split('; ').find(r => r.startsWith('csrftoken'))?.split('=')[1];
 }
 
-function openModal(id=null, desc='', montant=0){
+function checkMontant(val) {
+    const alerte = document.getElementById('alerteMontant');
+    alerte.style.display = parseFloat(val) > SEUIL_ALERTE_DEPENSE ? 'block' : 'none';
+}
+
+function openModal(id=null, desc='', montant=0) {
     editId = id;
     document.getElementById('description').value = desc;
-    document.getElementById('montant').value = montant;
+    document.getElementById('montant').value = montant || '';
+    document.getElementById('alerteMontant').style.display = 'none';
+    document.getElementById('modalTitle').innerText = id ? 'Modifier dépense' : 'Nouvelle dépense';
     modalInstance = new bootstrap.Modal(document.getElementById('depenseModal'));
     modalInstance.show();
 }
 
-document.getElementById('depenseForm').addEventListener('submit', function(e){
+document.getElementById('depenseForm').addEventListener('submit', function(e) {
     e.preventDefault();
-    let description = document.getElementById('description').value;
-    let montant = parseFloat(document.getElementById('montant').value);
+    const description = document.getElementById('description').value;
+    const montant = parseFloat(document.getElementById('montant').value);
 
-    let url = '/api/depenses/', method = 'POST';
-    if(editId){ url += editId + '/'; method = 'PUT'; }
+    if (montant <= 0) {
+        showToast('⚠️ Le montant doit être supérieur à 0 !', 'warning');
+        return;
+    }
+
+    const url = editId ? `/api/depenses/${editId}/` : '/api/depenses/';
+    const method = editId ? 'PUT' : 'POST';
 
     fetch(url, {
         method,
-        headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCSRFToken()},
+        headers: {'Content-Type':'application/json','X-CSRFToken':getCSRFToken()},
         body: JSON.stringify({ description, montant })
     })
     .then(async r => {
-        if(!r.ok){ let err = await r.json(); alert("Erreur : " + JSON.stringify(err)); return null; }
+        if (!r.ok) { const err = await r.json(); showToast('Erreur : ' + JSON.stringify(err), 'danger'); return null; }
         return r.json();
     })
     .then(res => {
-        if(res){ modalInstance.hide(); loadDepenses(); }
+        if (res) {
+            modalInstance.hide();
+            loadDepenses();
+            showToast(editId ? 'Dépense modifiée !' : 'Dépense enregistrée !');
+        }
     });
 });
 
-function loadDepenses(){
+function loadDepenses() {
     fetch('/api/depenses/')
     .then(r => r.json())
     .then(data => {
-        let tbody = document.getElementById('depenses-list');
+        const tbody = document.getElementById('depenses-list');
         tbody.innerHTML = '';
         let total = 0;
+        if (!data.length) {
+            tbody.innerHTML = '<tr class="empty-row"><td colspan="5">Aucune dépense enregistrée</td></tr>';
+            document.getElementById('totalDepenses').textContent = '0 FCFA';
+            return;
+        }
         data.forEach(d => {
             total += parseFloat(d.montant);
-            tbody.innerHTML += `
-            <tr>
-                <td>${d.id}</td>
-                <td>${d.description}</td>
-                <td><b>${parseFloat(d.montant).toFixed(2)}</b></td>
-                <td>${new Date(d.date).toLocaleString()}</td>
+            const montant = parseFloat(d.montant);
+            const isHaut = montant > SEUIL_ALERTE_DEPENSE;
+            const tr = document.createElement('tr');
+            tr.dataset.search = d.description.toLowerCase();
+            tr.innerHTML = `
+                <td><span style="color:#aaa;font-size:.8rem;">#${d.id}</span></td>
+                <td><b>${d.description}</b></td>
                 <td>
-                    <button class="btn btn-warning btn-sm" onclick="openModal(${d.id}, '${d.description}', ${d.montant})">✏️</button>
-                    <button class="btn btn-danger btn-sm" onclick="del(${d.id})">🗑️</button>
+                    <b style="color:${isHaut ? '#dc2626' : '#1e293b'};">${montant.toLocaleString()} FCFA</b>
+                    ${isHaut ? '<span style="background:#fee2e2;color:#dc2626;font-size:.68rem;padding:1px 7px;border-radius:10px;margin-left:6px;font-weight:700;">Élevé</span>' : ''}
                 </td>
-            </tr>`;
+                <td style="color:#888;font-size:.82rem;">${new Date(d.date).toLocaleString('fr-FR')}</td>
+                <td>
+                    <button class="btn-icon btn-edit me-1" onclick="openModal(${d.id}, '${d.description.replace(/'/g,"\\'")}', ${d.montant})" title="Modifier"><i class="bi bi-pencil-fill"></i></button>
+                    <button class="btn-icon btn-del" onclick="del(${d.id})" title="Supprimer"><i class="bi bi-trash-fill"></i></button>
+                </td>`;
+            tbody.appendChild(tr);
         });
-        document.getElementById('totalDepenses').innerText = total.toFixed(2);
+        document.getElementById('totalDepenses').textContent = total.toLocaleString('fr-FR') + ' FCFA';
     });
 }
 
-function del(id){
-    if(confirm('Supprimer cette dépense ?')){
-        fetch(`/api/depenses/${id}/`, { method: 'DELETE', headers: {'X-CSRFToken': getCSRFToken()} })
-        .then(() => loadDepenses());
-    }
+function del(id) {
+    if (!confirm('Supprimer cette dépense ?')) return;
+    fetch(`/api/depenses/${id}/`, { method:'DELETE', headers:{'X-CSRFToken':getCSRFToken()} })
+    .then(() => { loadDepenses(); showToast('Dépense supprimée.', 'warning'); });
+}
+
+function filterTable() {
+    const q = document.getElementById('searchInput').value.toLowerCase();
+    document.querySelectorAll('#depenses-list tr[data-search]').forEach(r => {
+        r.style.display = r.dataset.search.includes(q) ? '' : 'none';
+    });
 }
 
 loadDepenses();

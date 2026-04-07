@@ -1,0 +1,226 @@
+{% extends "frontend_app/base.html" %}
+{% load static %}
+{% block title %}Rapports & Traces{% endblock %}
+
+{% block content %}
+<style>
+.page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:10px; }
+.page-header h2 { font-weight:700; color:#1e3c72; margin:0; }
+
+/* Filtres */
+.filter-card { background:white; border-radius:14px; box-shadow:0 2px 12px rgba(0,0,0,0.07); padding:16px 20px; margin-bottom:20px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.filter-card label { font-size:.82rem; font-weight:600; color:#475569; margin:0; }
+.filter-card input[type=date] { border:1px solid #dee2e6; border-radius:8px; padding:6px 10px; font-size:.85rem; }
+.btn-filter { background:linear-gradient(135deg,#1e3c72,#2a5298); color:white; border:none; border-radius:8px; padding:7px 16px; font-size:.85rem; cursor:pointer; }
+.btn-reset { background:#f1f5f9; color:#475569; border:none; border-radius:8px; padding:7px 14px; font-size:.85rem; cursor:pointer; }
+
+/* Cartes résumé */
+.cards-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:14px; margin-bottom:24px; }
+.stat-card { background:white; border-radius:14px; box-shadow:0 2px 12px rgba(0,0,0,0.07); padding:18px 16px; display:flex; flex-direction:column; gap:6px; }
+.stat-card .label { font-size:.75rem; color:#94a3b8; text-transform:uppercase; letter-spacing:.5px; }
+.stat-card .value { font-size:1.3rem; font-weight:700; }
+.stat-card .icon { font-size:1.4rem; margin-bottom:4px; }
+
+/* Tabs */
+.tabs { display:flex; gap:8px; margin-bottom:16px; }
+.tab-btn { background:#f1f5f9; border:none; border-radius:8px; padding:8px 18px; font-size:.85rem; font-weight:600; color:#475569; cursor:pointer; transition:.2s; }
+.tab-btn.active { background:linear-gradient(135deg,#1e3c72,#2a5298); color:white; }
+
+/* Traces */
+.traces-card { background:white; border-radius:14px; box-shadow:0 2px 12px rgba(0,0,0,0.07); overflow:hidden; }
+.trace-item { display:flex; align-items:flex-start; gap:14px; padding:13px 18px; border-bottom:1px solid #f0f0f0; transition:.15s; }
+.trace-item:last-child { border-bottom:none; }
+.trace-item:hover { background:#f8f9ff; }
+.trace-icon { width:38px; height:38px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:1rem; flex-shrink:0; }
+.trace-body { flex:1; }
+.trace-body .desc { font-size:.88rem; font-weight:600; color:#1e293b; }
+.trace-body .detail { font-size:.78rem; color:#94a3b8; margin-top:2px; }
+.trace-right { text-align:right; flex-shrink:0; }
+.trace-right .montant { font-size:.92rem; font-weight:700; }
+.trace-right .date { font-size:.75rem; color:#94a3b8; margin-top:2px; }
+.badge-type { font-size:.68rem; padding:2px 8px; border-radius:10px; font-weight:600; }
+.empty-traces { text-align:center; padding:40px; color:#aaa; font-size:.9rem; }
+
+/* Filtre traces */
+.traces-filter { display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; }
+.tf-btn { background:#f1f5f9; border:none; border-radius:20px; padding:5px 14px; font-size:.78rem; font-weight:600; color:#475569; cursor:pointer; transition:.2s; }
+.tf-btn.active { color:white; }
+</style>
+
+<div class="page-header">
+    <h2><i class="bi bi-bar-chart-line me-2" style="color:#2a5298;"></i>Rapports & Traces</h2>
+</div>
+
+<!-- Filtres période -->
+<div class="filter-card">
+    <label><i class="bi bi-calendar3 me-1"></i>Période :</label>
+    <input type="date" id="dateDebut">
+    <span style="color:#94a3b8;">→</span>
+    <input type="date" id="dateFin">
+    <button class="btn-filter" onclick="loadRapport()"><i class="bi bi-search me-1"></i>Filtrer</button>
+    <button class="btn-reset" onclick="resetFiltres()"><i class="bi bi-x-circle me-1"></i>Réinitialiser</button>
+</div>
+
+<!-- Cartes résumé -->
+<div class="cards-grid">
+    <div class="stat-card">
+        <div class="icon" style="color:#16a34a;"><i class="bi bi-bag-check-fill"></i></div>
+        <div class="label">Total Ventes</div>
+        <div class="value" id="totalVentes" style="color:#16a34a;">—</div>
+        <small id="nbVentes" style="color:#94a3b8;font-size:.75rem;"></small>
+    </div>
+    <div class="stat-card">
+        <div class="icon" style="color:#7c3aed;"><i class="bi bi-wallet2"></i></div>
+        <div class="label">Encaissé</div>
+        <div class="value" id="totalEncaisse" style="color:#7c3aed;">—</div>
+    </div>
+    <div class="stat-card">
+        <div class="icon" style="color:#2563eb;"><i class="bi bi-cart-plus-fill"></i></div>
+        <div class="label">Total Achats</div>
+        <div class="value" id="totalAchats" style="color:#2563eb;">—</div>
+        <small id="nbAchats" style="color:#94a3b8;font-size:.75rem;"></small>
+    </div>
+    <div class="stat-card">
+        <div class="icon" style="color:#dc2626;"><i class="bi bi-cash-stack"></i></div>
+        <div class="label">Dépenses</div>
+        <div class="value" id="totalDepenses" style="color:#dc2626;">—</div>
+    </div>
+    <div class="stat-card">
+        <div class="icon" id="beneficeIcon"><i class="bi bi-graph-up-arrow"></i></div>
+        <div class="label">Bénéfice Net</div>
+        <div class="value" id="benefice">—</div>
+    </div>
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+    <button class="tab-btn active" onclick="showTab('traces')">
+        <i class="bi bi-clock-history me-1"></i>Traces d'activité
+    </button>
+</div>
+
+<!-- Filtre type de trace -->
+<div class="traces-filter">
+    <button class="tf-btn active" style="background:#475569;" onclick="filtrerTraces('tous', this)">Tous</button>
+    <button class="tf-btn" style="" onclick="filtrerTraces('vente', this)">Ventes</button>
+    <button class="tf-btn" onclick="filtrerTraces('achat', this)">Achats</button>
+    <button class="tf-btn" onclick="filtrerTraces('paiement', this)">Paiements</button>
+    <button class="tf-btn" onclick="filtrerTraces('depense', this)">Dépenses</button>
+</div>
+
+<!-- Liste traces -->
+<div class="traces-card" id="tracesContainer">
+    <div class="empty-traces"><i class="bi bi-hourglass-split me-2"></i>Chargement...</div>
+</div>
+
+<script>
+let allTraces = [];
+let filtreActif = 'tous';
+
+const COULEURS = {
+    vente:    { bg:'#dcfce7', color:'#16a34a', badge:'#16a34a', label:'Vente' },
+    achat:    { bg:'#dbeafe', color:'#2563eb', badge:'#2563eb', label:'Achat' },
+    paiement: { bg:'#ede9fe', color:'#7c3aed', badge:'#7c3aed', label:'Paiement' },
+    depense:  { bg:'#fee2e2', color:'#dc2626', badge:'#dc2626', label:'Dépense' },
+};
+
+function fmt(n) {
+    return Number(n).toLocaleString('fr-FR', {minimumFractionDigits:0}) + ' FCFA';
+}
+
+function getCSRFToken() {
+    return document.cookie.split('; ').find(r => r.startsWith('csrftoken'))?.split('=')[1];
+}
+
+function loadRapport() {
+    const debut = document.getElementById('dateDebut').value;
+    const fin = document.getElementById('dateFin').value;
+    let url = '/api/rapport/';
+    const params = [];
+    if (debut) params.push('debut=' + debut);
+    if (fin) params.push('fin=' + fin);
+    if (params.length) url += '?' + params.join('&');
+
+    fetch(url).then(r => r.json()).then(d => {
+        document.getElementById('totalVentes').textContent = fmt(d.total_ventes);
+        document.getElementById('totalEncaisse').textContent = fmt(d.total_encaisse);
+        document.getElementById('totalAchats').textContent = fmt(d.total_achats);
+        document.getElementById('totalDepenses').textContent = fmt(d.total_depenses);
+        document.getElementById('nbVentes').textContent = d.nb_ventes + ' vente(s)';
+        document.getElementById('nbAchats').textContent = d.nb_achats + ' achat(s)';
+        const b = d.benefice;
+        const el = document.getElementById('benefice');
+        const ic = document.getElementById('beneficeIcon');
+        el.textContent = fmt(b);
+        el.style.color = b >= 0 ? '#16a34a' : '#dc2626';
+        ic.innerHTML = b >= 0
+            ? '<i class="bi bi-graph-up-arrow" style="color:#16a34a;"></i>'
+            : '<i class="bi bi-graph-down-arrow" style="color:#dc2626;"></i>';
+    });
+}
+
+function loadTraces() {
+    fetch('/api/traces/').then(r => r.json()).then(data => {
+        allTraces = data;
+        renderTraces();
+    });
+}
+
+function filtrerTraces(type, btn) {
+    filtreActif = type;
+    document.querySelectorAll('.tf-btn').forEach(b => {
+        b.classList.remove('active');
+        b.style.background = '';
+        b.style.color = '';
+    });
+    btn.classList.add('active');
+    const c = COULEURS[type];
+    if (c) { btn.style.background = c.badge; btn.style.color = 'white'; }
+    else { btn.style.background = '#475569'; btn.style.color = 'white'; }
+    renderTraces();
+}
+
+function renderTraces() {
+    const list = filtreActif === 'tous' ? allTraces : allTraces.filter(t => t.type === filtreActif);
+    const container = document.getElementById('tracesContainer');
+    if (!list.length) {
+        container.innerHTML = '<div class="empty-traces"><i class="bi bi-inbox me-2"></i>Aucune trace trouvée</div>';
+        return;
+    }
+    container.innerHTML = list.map(t => {
+        const c = COULEURS[t.type] || {};
+        return `
+        <div class="trace-item">
+            <div class="trace-icon" style="background:${c.bg};color:${c.color};">
+                <i class="bi bi-${t.icone}"></i>
+            </div>
+            <div class="trace-body">
+                <div class="desc">
+                    ${t.description}
+                    <span class="badge-type ms-1" style="background:${c.bg};color:${c.badge};">${c.label}</span>
+                </div>
+                ${t.detail ? `<div class="detail">${t.detail}</div>` : ''}
+            </div>
+            <div class="trace-right">
+                <div class="montant" style="color:${c.color};">${fmt(t.montant)}</div>
+                <div class="date"><i class="bi bi-clock me-1"></i>${t.date}</div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function resetFiltres() {
+    document.getElementById('dateDebut').value = '';
+    document.getElementById('dateFin').value = '';
+    loadRapport();
+}
+
+function showTab(tab) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+}
+
+loadRapport();
+loadTraces();
+</script>
+{% endblock %}

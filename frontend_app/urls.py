@@ -18,6 +18,8 @@ urlpatterns = [
     path('paiements/', views.paiements_view, name='paiements'),
     path('categories/', views.categories_view, name='categories'),
     path('depenses/', views.depenses_view, name='depenses'),
+    path('alertes/', views.alertes_view, name='alertes'),
+    path('rapports/', views.rapports_view, name='rapports'),
     path('parametres/', views.parametres_view, name='parametres'),
     path('utilisateurs/', views.utilisateurs_view, name='utilisateurs'),
 ]

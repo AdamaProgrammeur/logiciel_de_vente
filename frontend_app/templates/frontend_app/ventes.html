@@ -257,6 +257,17 @@ document.getElementById('paiementForm').addEventListener('submit', function(e) {
     const venteId = document.getElementById('venteIdPaiement').value;
     const montant = parseFloat(document.getElementById('montantPaiement').value);
     const methode = document.getElementById('methodePaiement').value;
+
+    // Alerte montant dépassé
+    const vente = window._ventesPourPaiement && window._ventesPourPaiement[venteId];
+    if (vente) {
+        const reste = parseFloat(vente.reste) || 0;
+        if (montant > reste + 0.01) {
+            showToast(`⚠️ Montant (${montant.toLocaleString()}) dépasse le reste à payer (${reste.toLocaleString()}) !`, 'warning');
+            return;
+        }
+    }
+
     fetch('/api/paiements/', {
         method: 'POST',
         headers: {'Content-Type':'application/json','X-CSRFToken':getCSRFToken()},
@@ -275,6 +286,8 @@ function loadVentes() {
     fetch('/api/ventes/')
     .then(r => r.json())
     .then(data => {
+        window._ventesPourPaiement = {};
+        data.forEach(v => window._ventesPourPaiement[v.id] = v);
         const tbody = document.getElementById('ventes-list');
         tbody.innerHTML = '';
         if(!data.length) {

@@ -192,6 +192,13 @@ document.getElementById('achatForm').addEventListener('submit', function(e) {
 
     const montant_paye = parseFloat(document.getElementById('montantPaye').value) || 0;
 
+    // Alerte montant dépassé
+    const totalActuel = parseFloat(document.getElementById('totalGeneral').innerText) || 0;
+    if (montant_paye > totalActuel + 0.01) {
+        showToast(`⚠️ Montant payé (${montant_paye.toLocaleString()}) dépasse le total (${totalActuel.toLocaleString()}) !`, 'warning');
+        return;
+    }
+
     const produitsData = [];
     document.querySelectorAll('#produitsTable tbody tr').forEach(tr => {
         const produitId = parseInt(tr.querySelector('.produit').value);

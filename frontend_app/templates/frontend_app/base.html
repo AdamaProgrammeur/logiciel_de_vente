@@ -119,6 +119,7 @@ body { margin:0; font-family:'Segoe UI',sans-serif; background:#f0f2f5; }
     {% endif %}
 
     <div class="sb-section">Catalogue</div>
+    <a href="{% url 'alertes' %}" class="sb-link" id="sb-alertes"><i class="bi bi-exclamation-triangle-fill" style="color:#f87171;"></i> Alertes Stock <span id="badge-alertes" style="display:none;background:#dc2626;color:white;font-size:.65rem;padding:1px 7px;border-radius:10px;margin-left:auto;"></span></a>
     <a href="{% url 'categories' %}" class="sb-link"><i class="bi bi-tags"></i> Catégories</a>
     <a href="{% url 'produits' %}" class="sb-link"><i class="bi bi-box-seam"></i> Produits</a>
 
@@ -135,6 +136,7 @@ body { margin:0; font-family:'Segoe UI',sans-serif; background:#f0f2f5; }
     {% if user.role == 'admin' or user.is_staff %}
     <hr class="sb-divider">
     <div class="sb-section">Administration</div>
+    <a href="{% url 'rapports' %}" class="sb-link"><i class="bi bi-bar-chart-line"></i> Rapports</a>
     <a href="{% url 'utilisateurs' %}" class="sb-link"><i class="bi bi-people-fill"></i> Utilisateurs</a>
     <a href="{% url 'parametres' %}" class="sb-link"><i class="bi bi-gear-fill"></i> Paramètres</a>
     {% endif %}
@@ -162,6 +164,36 @@ body { margin:0; font-family:'Segoe UI',sans-serif; background:#f0f2f5; }
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- TOAST GLOBAL -->
+<div class="position-fixed top-0 end-0 p-3" style="z-index:9999;">
+  <div id="globalToast" class="toast align-items-center border-0" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="d-flex">
+      <div class="toast-body fw-semibold" id="globalToastMsg"></div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>
+  </div>
+</div>
+
+<script>
+function showToast(msg, type='success') {
+    const toast = document.getElementById('globalToast');
+    const colors = { success:'#16a34a', danger:'#dc2626', warning:'#d97706', info:'#2563eb' };
+    toast.style.background = colors[type] || colors.success;
+    toast.style.color = 'white';
+    document.getElementById('globalToastMsg').innerHTML = msg;
+    bootstrap.Toast.getOrCreateInstance(toast, {delay: 5000}).show();
+}
+
+function showAlertInline(containerId, msg, type='danger') {
+    const c = document.getElementById(containerId);
+    if (!c) return;
+    c.innerHTML = `<div class="alert alert-${type} alert-dismissible fade show py-2" style="font-size:.88rem;">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>${msg}
+        <button class="btn-close" data-bs-dismiss="alert"></button></div>`;
+    setTimeout(() => c.innerHTML = '', 6000);
+}
+</script>
 <script>
 function toggleSidebar() {
     document.getElementById('sidebar').classList.toggle('active');
@@ -170,6 +202,13 @@ function toggleSidebar() {
 document.querySelectorAll('.sb-link').forEach(a => {
     if(a.href === window.location.href) a.classList.add('active');
 });
+// Badge alertes stock
+fetch('/api/alertes/').then(r => r.json()).then(d => {
+    if(d.count > 0) {
+        const b = document.getElementById('badge-alertes');
+        if(b) { b.textContent = d.count; b.style.display = 'inline'; }
+    }
+}).catch(()=>{});
 </script>
 </body>
 </html>

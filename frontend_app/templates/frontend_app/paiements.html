@@ -141,6 +141,8 @@ function loadVentesSelect() {
     .then(r => r.json())
     .then(data => {
         const ventes = Array.isArray(data) ? data : (data.results || []);
+        window._ventesMap = {};
+        ventes.forEach(v => window._ventesMap[v.id] = v);
         const select = document.getElementById('venteSelect');
         select.innerHTML = '<option value="">-- Choisir une vente --</option>';
         ventes.forEach(v => {
@@ -157,6 +159,18 @@ function loadVentesSelect() {
 document.getElementById('paiementForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     const data = Object.fromEntries(new FormData(e.target));
+
+    // Alerte montant dépassé
+    const venteId = data.vente;
+    const montant = parseFloat(data.montant);
+    if (venteId && window._ventesMap && window._ventesMap[venteId]) {
+        const reste = parseFloat(window._ventesMap[venteId].reste) || 0;
+        if (montant > reste + 0.01) {
+            showToast(`⚠️ Montant (${montant.toLocaleString()}) dépasse le reste à payer (${reste.toLocaleString()}) !`, 'warning');
+            return;
+        }
+    }
+
     const res = await fetch('/api/paiements/', {
         method: 'POST',
         headers: {'Content-Type':'application/json','X-CSRFToken':getCSRFToken()},
