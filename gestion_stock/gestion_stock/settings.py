@@ -65,8 +65,13 @@ TEMPLATES = [
 WSGI_APPLICATION = 'gestion_stock.wsgi.application'
 
 # Database PostgreSQL
+import dj_database_url
 DATABASES = {
-    'default': {
+    'default': dj_database_url.config(
+        default=os.getenv('DATABASE_URL'),
+        conn_max_age=600,
+        ssl_require=not DEBUG,
+    ) if os.getenv('DATABASE_URL') else {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': os.getenv('DB_NAME'),
         'USER': os.getenv('DB_USER'),
