@@ -4,29 +4,10 @@
 
 {% block content %}
 <style>
-.page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:10px; }
-.page-header h2 { font-weight:700; color:#1e3c72; margin:0; }
-.search-box { position:relative; }
-.search-box input { padding-left:38px; border-radius:20px; border:1px solid #dee2e6; width:240px; height:38px; font-size:.88rem; }
-.search-box i { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#aaa; }
-.btn-add { background:linear-gradient(135deg,#dc2626,#b91c1c); color:white; border:none; border-radius:10px; padding:8px 18px; font-size:.88rem; display:flex; align-items:center; gap:6px; transition:.2s; cursor:pointer; }
-.btn-add:hover { transform:translateY(-2px); box-shadow:0 4px 12px rgba(220,38,38,.3); }
 .sum-card { background:white; border-radius:14px; box-shadow:0 2px 12px rgba(0,0,0,.07); padding:18px 20px; margin-bottom:20px; display:flex; align-items:center; gap:16px; max-width:280px; }
 .sum-card .ic { width:48px; height:48px; border-radius:12px; background:#fee2e2; color:#dc2626; display:flex; align-items:center; justify-content:center; font-size:1.4rem; flex-shrink:0; }
 .sum-card .val { font-size:1.4rem; font-weight:800; color:#dc2626; }
 .sum-card .lbl { font-size:.75rem; color:#94a3b8; text-transform:uppercase; letter-spacing:.5px; }
-.table-card { background:white; border-radius:14px; box-shadow:0 2px 12px rgba(0,0,0,.07); overflow:hidden; }
-.table-card thead th { background:#1e3c72; color:white; font-size:.78rem; text-transform:uppercase; letter-spacing:.5px; padding:12px 16px; border:none; }
-.table-card tbody td { padding:11px 16px; vertical-align:middle; font-size:.88rem; border-bottom:1px solid #f0f0f0; }
-.table-card tbody tr:hover { background:#fff8f8; }
-.table-card tbody tr:last-child td { border-bottom:none; }
-.btn-icon { width:32px; height:32px; border-radius:8px; border:none; display:inline-flex; align-items:center; justify-content:center; font-size:.85rem; transition:.2s; cursor:pointer; }
-.btn-icon:hover { transform:scale(1.1); }
-.btn-edit { background:#fff3cd; color:#856404; }
-.btn-edit:hover { background:#ffc107; color:white; }
-.btn-del { background:#fde8e8; color:#c0392b; }
-.btn-del:hover { background:#e74c3c; color:white; }
-.empty-row td { text-align:center; padding:30px; color:#aaa; font-size:.9rem; }
 .alerte-montant { background:#fff7ed; border:1px solid #fed7aa; border-radius:8px; padding:8px 14px; font-size:.82rem; color:#c2410c; display:none; margin-top:6px; }
 </style>
 
@@ -37,7 +18,7 @@
             <i class="bi bi-search"></i>
             <input type="text" id="searchInput" placeholder="Rechercher..." oninput="filterTable()">
         </div>
-        <button class="btn-add" onclick="openModal()">
+        <button class="btn-add" style="background:linear-gradient(135deg,#dc2626,#b91c1c);" onclick="openModal()">
             <i class="bi bi-plus-circle-fill"></i> Ajouter dépense
         </button>
     </div>
@@ -51,20 +32,10 @@
     </div>
 </div>
 
-<div id="alertBox"></div>
-
 <div class="table-card">
-    <div style="overflow-x:auto;">
+    <div class="table-responsive-wrap">
     <table class="table mb-0" style="min-width:500px;">
-        <thead>
-            <tr>
-                <th>#</th>
-                <th>Description</th>
-                <th>Montant</th>
-                <th>Date</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
+        <thead><tr><th>#</th><th>Description</th><th>Montant</th><th>Date</th><th>Actions</th></tr></thead>
         <tbody id="depenses-list"></tbody>
     </table>
     </div>
@@ -111,8 +82,7 @@ function getCSRFToken() {
 }
 
 function checkMontant(val) {
-    const alerte = document.getElementById('alerteMontant');
-    alerte.style.display = parseFloat(val) > SEUIL_ALERTE_DEPENSE ? 'block' : 'none';
+    document.getElementById('alerteMontant').style.display = parseFloat(val) > SEUIL_ALERTE_DEPENSE ? 'block' : 'none';
 }
 
 function openModal(id=null, desc='', montant=0) {
@@ -129,15 +99,9 @@ document.getElementById('depenseForm').addEventListener('submit', function(e) {
     e.preventDefault();
     const description = document.getElementById('description').value;
     const montant = parseFloat(document.getElementById('montant').value);
-
-    if (montant <= 0) {
-        showToast('⚠️ Le montant doit être supérieur à 0 !', 'warning');
-        return;
-    }
-
+    if (montant <= 0) { showToast('Le montant doit être supérieur à 0 !', 'warning'); return; }
     const url = editId ? `/api/depenses/${editId}/` : '/api/depenses/';
     const method = editId ? 'PUT' : 'POST';
-
     fetch(url, {
         method,
         headers: {'Content-Type':'application/json','X-CSRFToken':getCSRFToken()},
@@ -148,11 +112,7 @@ document.getElementById('depenseForm').addEventListener('submit', function(e) {
         return r.json();
     })
     .then(res => {
-        if (res) {
-            modalInstance.hide();
-            loadDepenses();
-            showToast(editId ? 'Dépense modifiée !' : 'Dépense enregistrée !');
-        }
+        if (res) { modalInstance.hide(); loadDepenses(); showToast(editId ? 'Dépense modifiée !' : 'Dépense enregistrée !'); }
     });
 });
 
@@ -164,7 +124,7 @@ function loadDepenses() {
         tbody.innerHTML = '';
         let total = 0;
         if (!data.length) {
-            tbody.innerHTML = '<tr class="empty-row"><td colspan="5">Aucune dépense enregistrée</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:30px;color:#aaa;">Aucune dépense enregistrée</td></tr>';
             document.getElementById('totalDepenses').textContent = '0 FCFA';
             return;
         }
@@ -172,6 +132,7 @@ function loadDepenses() {
             total += parseFloat(d.montant);
             const montant = parseFloat(d.montant);
             const isHaut = montant > SEUIL_ALERTE_DEPENSE;
+            const desc = d.description.replace(/'/g, "\\'");
             const tr = document.createElement('tr');
             tr.dataset.search = d.description.toLowerCase();
             tr.innerHTML = `
@@ -182,10 +143,10 @@ function loadDepenses() {
                     ${isHaut ? '<span style="background:#fee2e2;color:#dc2626;font-size:.68rem;padding:1px 7px;border-radius:10px;margin-left:6px;font-weight:700;">Élevé</span>' : ''}
                 </td>
                 <td style="color:#888;font-size:.82rem;">${new Date(d.date).toLocaleString('fr-FR')}</td>
-                <td>
-                    <button class="btn-icon btn-edit me-1" onclick="openModal(${d.id}, '${d.description.replace(/'/g,"\\'")}', ${d.montant})" title="Modifier"><i class="bi bi-pencil-fill"></i></button>
+                <td><div class="actions-cell">
+                    <button class="btn-icon btn-edit" onclick="openModal(${d.id}, '${desc}', ${d.montant})" title="Modifier"><i class="bi bi-pencil-fill"></i></button>
                     <button class="btn-icon btn-del" onclick="del(${d.id})" title="Supprimer"><i class="bi bi-trash-fill"></i></button>
-                </td>`;
+                </div></td>`;
             tbody.appendChild(tr);
         });
         document.getElementById('totalDepenses').textContent = total.toLocaleString('fr-FR') + ' FCFA';

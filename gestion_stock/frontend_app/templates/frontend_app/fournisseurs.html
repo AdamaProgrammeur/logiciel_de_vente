@@ -38,17 +38,9 @@
 </div>
 
 <div class="table-card">
-    <div style="overflow-x:auto;">
+    <div class="table-responsive-wrap">
     <table class="table mb-0" style="min-width:500px;">
-        <thead>
-            <tr>
-                <th>#</th>
-                <th>Nom</th>
-                <th>Téléphone</th>
-                <th>Adresse</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
+        <thead><tr><th>#</th><th>Nom</th><th>Téléphone</th><th>Adresse</th><th>Actions</th></tr></thead>
         <tbody id="fournisseurs-list"></tbody>
     </table>
     </div>
@@ -115,10 +107,10 @@ function loadFournisseurs() {
                 <td><b>${f.nom}</b></td>
                 <td>${f.telephone || '<span style="color:#ccc;">—</span>'}</td>
                 <td>${f.adresse || '<span style="color:#ccc;">—</span>'}</td>
-                <td>
-                    <button class="btn-icon btn-edit me-1" onclick="editFournisseur(${f.id})" title="Modifier"><i class="bi bi-pencil-fill"></i></button>
+                <td><div class="actions-cell">
+                    <button class="btn-icon btn-edit" onclick="editFournisseur(${f.id})" title="Modifier"><i class="bi bi-pencil-fill"></i></button>
                     <button class="btn-icon btn-del" onclick="deleteFournisseur(${f.id})" title="Supprimer"><i class="bi bi-trash-fill"></i></button>
-                </td>`;
+                </div></td>`;
             tbody.appendChild(tr);
         });
     });

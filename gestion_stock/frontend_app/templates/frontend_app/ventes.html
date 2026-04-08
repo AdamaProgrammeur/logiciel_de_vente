@@ -319,13 +319,11 @@ function loadVentes() {
                 <td class="${reste > 0 ? 'text-due' : 'text-ok'}">${reste.toLocaleString()}</td>
                 <td>${badge}</td>
                 <td style="font-size:.82rem;color:#888;">${v.date ? new Date(v.date).toLocaleString() : ''}</td>
-                <td>
-                    <div style="display:flex;align-items:center;gap:4px;">
-                        ${reste > 0 ? `<button class="btn-icon btn-pay" onclick="ouvrirPaiement(${v.id})" title="Payer"><i class="bi bi-cash-coin"></i></button>` : '<span style="width:32px;display:inline-block;"></span>'}
-                        <button class="btn-icon btn-print" onclick="imprimerFacture(${v.id})" title="Imprimer facture"><i class="bi bi-printer-fill"></i></button>
-                        <button class="btn-icon btn-del" onclick="delVente(${v.id})" title="Supprimer"><i class="bi bi-trash-fill"></i></button>
-                    </div>
-                </td>`;
+                <td><div class="actions-cell">
+                    ${reste > 0 ? `<button class="btn-icon btn-pay" onclick="ouvrirPaiement(${v.id})" title="Payer"><i class="bi bi-cash-coin"></i></button>` : ''}
+                    <button class="btn-icon btn-print" onclick="imprimerFacture(${v.id})" title="Imprimer facture"><i class="bi bi-printer-fill"></i></button>
+                    <button class="btn-icon btn-del" onclick="delVente(${v.id})" title="Supprimer"><i class="bi bi-trash-fill"></i></button>
+                </div></td>`;
             tbody.appendChild(tr);
         });
     });

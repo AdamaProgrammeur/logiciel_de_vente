@@ -266,12 +266,10 @@ function loadAchats() {
                 <td><b>${total.toLocaleString()}</b></td>
                 <td>${montantPaye.toLocaleString()}</td>
                 <td class="${reste > 0 ? 'text-due' : 'text-ok'}">${reste.toLocaleString()}</td>
-                <td>
-                    <div style="display:flex;align-items:center;gap:4px;">
-                        <button class="btn-icon btn-edit" onclick="editAchat(${e.id})" title="Modifier"><i class="bi bi-pencil-fill"></i></button>
-                        <button class="btn-icon btn-del" onclick="delAchat(${e.id})" title="Supprimer"><i class="bi bi-trash-fill"></i></button>
-                    </div>
-                </td>`;
+                <td><div class="actions-cell">
+                    <button class="btn-icon btn-edit" onclick="editAchat(${e.id})" title="Modifier"><i class="bi bi-pencil-fill"></i></button>
+                    <button class="btn-icon btn-del" onclick="delAchat(${e.id})" title="Supprimer"><i class="bi bi-trash-fill"></i></button>
+                </div></td>`;
             tbody.appendChild(tr);
         });
     });
