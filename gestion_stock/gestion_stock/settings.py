@@ -12,7 +12,7 @@ load_dotenv(BASE_DIR.parent / '.env')
 # SECURITY
 SECRET_KEY = os.getenv('SECRET_KEY')
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
-ALLOWED_HOSTS = ['logiciel-de-vente.onrender.com']
+ALLOWED_HOSTS = ['stockpro.onrender.com']
 
 # Applications
 INSTALLED_APPS = [
