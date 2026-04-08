@@ -87,9 +87,16 @@ def utilisateurs_view(request):
 
 
 def login_view(request):
-    return render(request, 'frontend_app/login.html')
+    from django.views.decorators.csrf import ensure_csrf_cookie
+    from django.utils.decorators import method_decorator
+    response = render(request, 'frontend_app/login.html')
+    from django.middleware.csrf import get_token
+    get_token(request)
+    return response
 
 def register_view(request):
+    from django.middleware.csrf import get_token
+    get_token(request)
     return render(request, 'frontend_app/register.html')
 
 @login_required

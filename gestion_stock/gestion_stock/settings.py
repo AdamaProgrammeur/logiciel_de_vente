@@ -137,6 +137,11 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# CSRF
+CSRF_TRUSTED_ORIGINS = ['https://stockpro-ep40.onrender.com', 'http://localhost:8000']
+CSRF_COOKIE_HTTPONLY = False
+CSRF_COOKIE_SAMESITE = 'Lax'
+
 # Sécurité HTTPS (désactivé en dev, activer en production)
 if not DEBUG:
     SECURE_HSTS_SECONDS = 31536000
